@@ -59,13 +59,22 @@ export default function Login() {
 
     const errorDesc = getParam("error_description");
     const verified = getParam("verified");
+    const passwordReset = getParam("password_reset");
+    const forgotParam = getParam("forgot");
     
     if (errorDesc) {
       setError(errorDesc.replace(/\+/g, " "));
       window.history.replaceState(null, "", window.location.pathname + "#/login");
+    } else if (passwordReset) {
+      setMessage("Password updated successfully! You can now sign in with your new password.");
+      setMode("signin");
+      window.history.replaceState(null, "", window.location.pathname + "#/login");
     } else if (verified) {
       setMessage("Email verified successfully! You can now sign in.");
       setMode("signin");
+      window.history.replaceState(null, "", window.location.pathname + "#/login");
+    } else if (forgotParam) {
+      setMode("forgot");
       window.history.replaceState(null, "", window.location.pathname + "#/login");
     }
   }, []);

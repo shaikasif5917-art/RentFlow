@@ -2,43 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
-
-function extractAuthParams(): {
-  code: string | null;
-  error: string | null;
-  errorDescription: string | null;
-} {
-  // 1. Check window.location.search (standard query params)
-  const searchParams = new URLSearchParams(window.location.search);
-  let code = searchParams.get("code");
-  let error = searchParams.get("error");
-  let errorDescription = searchParams.get("error_description");
-
-  // 2. Check window.location.hash (HashRouter query or fragment params)
-  const hash = window.location.hash;
-  if (!code || !error || !errorDescription) {
-    const qIndex = hash.indexOf("?");
-    if (qIndex !== -1) {
-      const hashParams = new URLSearchParams(hash.slice(qIndex + 1));
-      if (!code) code = hashParams.get("code");
-      if (!error) error = hashParams.get("error");
-      if (!errorDescription) errorDescription = hashParams.get("error_description");
-    }
-  }
-
-  // 3. Check for secondary hash fragment params e.g. #error_description=...
-  if (!code || !error || !errorDescription) {
-    const secondHash = hash.indexOf("#", 1);
-    if (secondHash !== -1) {
-      const fragParams = new URLSearchParams(hash.slice(secondHash + 1));
-      if (!code) code = fragParams.get("code");
-      if (!error) error = fragParams.get("error");
-      if (!errorDescription) errorDescription = fragParams.get("error_description");
-    }
-  }
-
-  return { code, error, errorDescription };
-}
+import { parseAuthParamsFromUrl } from "../utils/authUrls";
 
 export default function AuthCallback() {
   const navigate = useNavigate();
@@ -48,7 +12,7 @@ export default function AuthCallback() {
     let mounted = true;
 
     const processCallback = async () => {
-      const { code, error: errParam, errorDescription } = extractAuthParams();
+      const params = parseAuthParamsFromUrl(window.location.href);
 
       // Clean query parameters from URL to prevent duplicate processing on refresh
       if (window.location.search || window.location.hash.includes("?")) {
@@ -58,13 +22,17 @@ export default function AuthCallback() {
       // Check if user is already authenticated
       const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData.session) {
-        if (mounted) navigate("/dashboard", { replace: true });
+        if (params.type === "recovery") {
+          if (mounted) navigate("/reset-password", { replace: true });
+        } else {
+          if (mounted) navigate("/dashboard", { replace: true });
+        }
         return;
       }
 
       // Handle confirmation or callback error from Supabase
-      if (errorDescription || errParam) {
-        const errorMsg = (errorDescription || errParam || "Email verification failed").replace(/\+/g, " ");
+      if (params.errorDescription || params.error) {
+        const errorMsg = (params.errorDescription || params.error || "Authentication verification failed").replace(/\+/g, " ");
         if (mounted) setError(errorMsg);
         setTimeout(() => {
           if (mounted) {
@@ -74,10 +42,54 @@ export default function AuthCallback() {
         return;
       }
 
-      // Handle PKCE code exchange
-      if (code) {
+      // Handle recovery flow via access token or code
+      if (params.type === "recovery") {
+        if (params.accessToken) {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: params.accessToken,
+            refresh_token: params.refreshToken || "",
+          });
+          if (sessionError) {
+            console.error("Recovery setSession error:", sessionError);
+            if (mounted) navigate(`/login?error_description=${encodeURIComponent(sessionError.message)}`, { replace: true });
+            return;
+          }
+          if (mounted) navigate("/reset-password", { replace: true });
+          return;
+        }
+
+        if (params.code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(params.code);
+          if (exchangeError) {
+            console.error("Recovery exchange error:", exchangeError);
+            if (mounted) navigate(`/login?error_description=${encodeURIComponent(exchangeError.message)}`, { replace: true });
+            return;
+          }
+          if (mounted) navigate("/reset-password", { replace: true });
+          return;
+        }
+      }
+
+      // Handle implicit grant access token (general login/signup)
+      if (params.accessToken) {
         try {
-          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          const { data, error: setSessionError } = await supabase.auth.setSession({
+            access_token: params.accessToken,
+            refresh_token: params.refreshToken || "",
+          });
+          if (!setSessionError && data.session) {
+            if (mounted) navigate("/dashboard", { replace: true });
+            return;
+          }
+        } catch (err) {
+          console.error("Access token setSession error:", err);
+        }
+      }
+
+      // Handle PKCE code exchange
+      if (params.code) {
+        try {
+          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(params.code);
 
           if (exchangeError) {
             // Check if Supabase auto-exchange already created the session
@@ -88,8 +100,7 @@ export default function AuthCallback() {
             }
 
             // Cross-device or code verifier mismatch:
-            // The email was confirmed on Supabase, but session could not be established locally.
-            // Direct user to log in with confirmed status.
+            // Email was confirmed on Supabase, but session could not be established locally.
             console.warn("PKCE code exchange notice:", exchangeError.message);
             if (mounted) navigate("/login?verified=true", { replace: true });
             return;
@@ -129,7 +140,7 @@ export default function AuthCallback() {
         {error ? (
           <>
             <div className="mb-4 rounded-full bg-red-100 p-3">
-              <div className="size-6 text-red-600 font-bold">!</div>
+              <div className="size-6 font-bold text-red-600">!</div>
             </div>
             <h2 className="text-lg font-semibold text-[var(--color-ink)]">Verification Failed</h2>
             <p className="mt-2 text-[14px] text-[var(--color-ink-soft)]">{error}</p>
@@ -137,7 +148,7 @@ export default function AuthCallback() {
         ) : (
           <>
             <Loader2 className="mb-4 size-8 animate-spin text-[var(--color-accent)]" />
-            <h2 className="text-lg font-semibold text-[var(--color-ink)]">Verifying your email</h2>
+            <h2 className="text-lg font-semibold text-[var(--color-ink)]">Verifying authentication</h2>
             <p className="mt-2 text-[14px] text-[var(--color-ink-soft)]">Please wait while we confirm your access...</p>
           </>
         )}
