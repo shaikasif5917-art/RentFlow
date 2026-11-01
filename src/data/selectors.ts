@@ -1,4 +1,113 @@
-import type { Property, PropertyState, Tenant, Unit } from "./types";
+import type { Property, PropertyState, Tenant, Unit, Payment } from "./types";
+import { isPaymentOverdue, isTenantLiableForBillingMonth, type RentCollectionMethod } from "../utils/billing";
+
+export type TenantMonthState = "paid" | "due" | "overdue" | "not_started" | "vacated";
+
+export interface TenantMonthStatus {
+  status: TenantMonthState;
+  amount: number;
+  paymentRecord?: Payment;
+  isLiable: boolean;
+}
+
+export function getTenantMonthStatus(
+  tenant: Tenant,
+  billingMonth: string,
+  payments: Payment[],
+  collectionMethod: RentCollectionMethod = "prepaid",
+  dueDay: number = 1,
+  gracePeriodDays: number = 0,
+  asOf: Date = new Date(),
+): TenantMonthStatus {
+  const isLiable = isTenantLiableForBillingMonth(tenant, billingMonth);
+  if (!isLiable) {
+    const startStr = tenant.since;
+    if (startStr && billingMonth < startStr.substring(0, 7) + "-01") {
+      return { status: "not_started", amount: 0, isLiable: false };
+    }
+    return { status: "vacated", amount: 0, isLiable: false };
+  }
+
+  const payment = payments.find(
+    (p) => p.tenantId === tenant.id && p.billingMonth === billingMonth
+  );
+
+  const amount = payment?.amount ?? tenant.rent;
+
+  if (payment?.state === "paid") {
+    return { status: "paid", amount, paymentRecord: payment, isLiable: true };
+  }
+
+  const overdue = isPaymentOverdue(billingMonth, collectionMethod, dueDay, gracePeriodDays, asOf);
+  return {
+    status: overdue ? "overdue" : "due",
+    amount,
+    paymentRecord: payment,
+    isLiable: true,
+  };
+}
+
+export interface MonthlyTenantsSummary {
+  eligibleCount: number;
+  paidCount: number;
+  dueCount: number;
+  overdueCount: number;
+  expected: number;
+  collected: number;
+  outstanding: number;
+}
+
+export function getMonthlyTenantsSummary(
+  tenants: Tenant[],
+  billingMonth: string,
+  payments: Payment[],
+  collectionMethod: RentCollectionMethod = "prepaid",
+  dueDay: number = 1,
+  gracePeriodDays: number = 0,
+  asOf: Date = new Date(),
+): MonthlyTenantsSummary {
+  let eligibleCount = 0;
+  let paidCount = 0;
+  let dueCount = 0;
+  let overdueCount = 0;
+  let expected = 0;
+  let collected = 0;
+
+  for (const t of tenants) {
+    const monthStatus = getTenantMonthStatus(
+      t,
+      billingMonth,
+      payments,
+      collectionMethod,
+      dueDay,
+      gracePeriodDays,
+      asOf
+    );
+
+    if (monthStatus.isLiable) {
+      eligibleCount++;
+      expected += monthStatus.amount;
+      if (monthStatus.status === "paid") {
+        paidCount++;
+        collected += monthStatus.amount;
+      } else if (monthStatus.status === "overdue") {
+        overdueCount++;
+      } else {
+        dueCount++;
+      }
+    }
+  }
+
+  return {
+    eligibleCount,
+    paidCount,
+    dueCount,
+    overdueCount,
+    expected,
+    collected,
+    outstanding: Math.max(0, expected - collected),
+  };
+}
 
 export interface PropertyMetrics {
   total: number;

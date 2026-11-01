@@ -4,7 +4,12 @@ import { ChevronLeft, Mail, Phone, Users, Pencil } from "lucide-react";
 import { usePortfolio } from "../data/PortfolioContext";
 import { unitLabel } from "../data/selectors";
 import { currency, paymentLabel, paymentTone } from "../utils/format";
-import { getCurrentBillingMonth } from "../utils/billing";
+import {
+  getActiveCollectionMonth,
+  parseBillingMonth,
+  isPaymentOverdue,
+  type RentCollectionMethod,
+} from "../utils/billing";
 import { TenantNotes } from "../components/property/TenantNotes";
 import { UpdateRentModal, VacateTenantModal, EditTenantRentModal, EditTenantNameModal } from "../components/property/UnitModals";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -18,7 +23,7 @@ import { EmptyState } from "../components/ui/EmptyState";
 
 export default function TenantDetail() {
   const { tenantId } = useParams();
-  const { tenants, payments, isLoading } = usePortfolio();
+  const { tenants, payments, profile, isLoading } = usePortfolio();
   const [editingRent, setEditingRent] = useState(false);
   const [editingAgreedRent, setEditingAgreedRent] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -51,12 +56,24 @@ export default function TenantDetail() {
     );
   }
 
-  const history = payments.filter((p) => p.tenantId === tenant.id);
+  const collectionMethod = (profile?.rent_collection_method as RentCollectionMethod) || "prepaid";
+  const dueDay = profile?.default_due_day || 1;
+  const gracePeriod = profile?.grace_period_days || 0;
   const today = new Date();
-  const monthName = today.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const currentBillingMonth = getCurrentBillingMonth(today);
+  const currentBillingMonth = getActiveCollectionMonth(collectionMethod, today);
+  const { year, monthIndex } = parseBillingMonth(currentBillingMonth);
+  const monthName = new Date(year, monthIndex, 1).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+
+  const history = payments.filter((p) => p.tenantId === tenant.id);
   const currentPayment = history.find((p) => p.billingMonth === currentBillingMonth);
-  const currentStatus = currentPayment?.state || tenant.state;
+  const currentStatus =
+    currentPayment?.state ||
+    (isPaymentOverdue(currentBillingMonth, collectionMethod, dueDay, gracePeriod, today)
+      ? "overdue"
+      : "due");
 
   return (
     <div className="space-y-5 sm:space-y-8 pb-24 sm:pb-0">
@@ -220,6 +237,10 @@ export default function TenantDetail() {
         open={editingRent}
         onClose={() => setEditingRent(false)}
         tenant={tenant}
+        billingMonth={currentBillingMonth}
+        initialState={currentStatus}
+        initialMethod={currentPayment?.method}
+        rentAmount={currentPayment?.amount || tenant.rent}
       />
       
       <EditTenantRentModal

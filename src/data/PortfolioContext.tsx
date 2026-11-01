@@ -46,6 +46,7 @@ interface PortfolioContextValue {
   tenantNotes: TenantNote[];
   payments: Payment[];
   activity: ActivityItem[];
+  profile: any;
   isLoading: boolean;
   addProperty: (input: NewPropertyInput) => Promise<string | undefined>;
   updateProperty: (id: string, patch: PropertyPatch) => Promise<void>;
@@ -54,7 +55,7 @@ interface PortfolioContextValue {
   recordRent: (unitId: string, method: PaymentMethod) => Promise<void>;
   resolveMaintenance: (unitId: string) => void;
   addExpense: (propertyId: string, input: { category: string; amount: number; note: string }) => Promise<void>;
-  updateRentStatus: (tenantId: string, isPaid: boolean) => Promise<void>;
+  updateRentStatus: (tenantId: string, isPaid: boolean, billingMonth?: string, method?: PaymentMethod) => Promise<void>;
   vacateTenant: (tenantId: string, vacatingDate: string) => Promise<void>;
   updateTenantRent: (tenantId: string, newRent: number) => Promise<void>;
   updateTenantName: (tenantId: string, newName: string) => Promise<void>;
@@ -643,7 +644,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
   );
 
   const updateRentStatus = useCallback<PortfolioContextValue["updateRentStatus"]>(
-    async (tenantId, isPaid) => {
+    async (tenantId, isPaid, customBillingMonth, customMethod) => {
       if (!user) return;
       const tenant = tenants.find((t) => t.id === tenantId);
       const unit = units.find((u) => u.id === tenant?.unitId);
@@ -651,25 +652,29 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
 
       const today = new Date();
       const collectionMethod = (profile?.rent_collection_method as RentCollectionMethod) || "prepaid";
-      const billingMonth = getActiveCollectionMonth(collectionMethod, today);
+      const billingMonth = customBillingMonth || getActiveCollectionMonth(collectionMethod, today);
       const dueDay = profile?.default_due_day || 1;
       const grace = profile?.grace_period_days || 0;
 
       try {
+        const existingPayment = payments.find(
+          (p) => p.tenantId === tenant.id && p.billingMonth === billingMonth
+        );
+        const rentAmount = existingPayment?.amount || tenant.rent;
+
         const payload: any = {
           owner_id: user.id,
           property_id: tenant.propertyId,
           unit_id: unit.id,
           tenant_id: tenant.id,
-          amount: tenant.rent,
+          amount: rentAmount,
           billing_month: billingMonth,
         };
 
         if (isPaid) {
-          const existingPayment = payments.find(p => p.tenantId === tenant.id && p.billingMonth === billingMonth);
           payload.state = "paid";
           payload.payment_date = today.toISOString().split("T")[0];
-          payload.method = existingPayment?.method || "UPI";
+          payload.method = customMethod || existingPayment?.method || "UPI";
           payload.recorded_at = (existingPayment?.state === "paid" && existingPayment.recordedAt) 
             ? existingPayment.recordedAt 
             : new Date().toISOString();
@@ -689,7 +694,8 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
 
         await fetchPortfolio();
         if (isPaid) {
-          log(tenant.propertyId, "payment", `${currency(tenant.rent)} rent received`, `Unit ${unit.number} · ${tenant.name}`);
+          const monthLabel = new Date(billingMonth).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+          log(tenant.propertyId, "payment", `${currency(rentAmount)} rent received (${monthLabel})`, `Unit ${unit.number} · ${tenant.name}`);
         }
       } catch (err) {
         console.error("Error updating rent status:", err);
@@ -920,6 +926,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       tenantNotes,
       payments,
       activity,
+      profile,
       isLoading,
       addProperty,
       updateProperty,
@@ -937,7 +944,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       deleteTenantNote,
       deleteProperty,
     }),
-    [properties, units, tenants, tenantNotes, payments, activity, isLoading, addProperty, updateProperty, addUnit, assignTenant, recordRent, resolveMaintenance, addExpense, updateRentStatus, vacateTenant, updateTenantRent, updateTenantName, addTenantNote, updateTenantNote, deleteTenantNote, deleteProperty],
+    [properties, units, tenants, tenantNotes, payments, activity, profile, isLoading, addProperty, updateProperty, addUnit, assignTenant, recordRent, resolveMaintenance, addExpense, updateRentStatus, vacateTenant, updateTenantRent, updateTenantName, addTenantNote, updateTenantNote, deleteTenantNote, deleteProperty],
   );
 
   return <PortfolioContext.Provider value={value}>{children}</PortfolioContext.Provider>;

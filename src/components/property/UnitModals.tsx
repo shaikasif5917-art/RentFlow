@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { CheckCircle2 } from "lucide-react";
 import type { PaymentMethod, Tenant, Unit } from "../../data/types";
 import { usePortfolio } from "../../data/PortfolioContext";
 import { currency } from "../../utils/format";
+import { cn } from "../../utils/cn";
+import { getActiveCollectionMonth, parseBillingMonth, type RentCollectionMethod } from "../../utils/billing";
 import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
@@ -353,22 +355,51 @@ export function AddExpenseModal({ open, onClose, propertyId }: { open: boolean; 
 
 /* ------------------------------- Update rent status ------------------------------- */
 
-export function UpdateRentModal({ open, onClose, tenant }: { open: boolean; onClose: () => void; tenant: Tenant | null }) {
-  const { updateRentStatus } = usePortfolio();
+export function UpdateRentModal({
+  open,
+  onClose,
+  tenant,
+  billingMonth,
+  initialState,
+  initialMethod,
+  rentAmount,
+}: {
+  open: boolean;
+  onClose: () => void;
+  tenant: Tenant | null;
+  billingMonth?: string;
+  initialState?: "paid" | "due" | "overdue" | "not_started" | "vacated";
+  initialMethod?: PaymentMethod;
+  rentAmount?: number;
+}) {
+  const { updateRentStatus, profile } = usePortfolio();
   const [isPaid, setIsPaid] = useState<boolean>(false);
+  const [method, setMethod] = useState<PaymentMethod>("UPI");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  const collectionMethod = (profile?.rent_collection_method as RentCollectionMethod) || "prepaid";
+  const effectiveMonth = billingMonth || getActiveCollectionMonth(collectionMethod, new Date());
+
+  const monthLabel = useMemo(() => {
+    try {
+      const { year, monthIndex } = parseBillingMonth(effectiveMonth);
+      return new Date(year, monthIndex, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    } catch {
+      return effectiveMonth;
+    }
+  }, [effectiveMonth]);
 
   // Sync state when modal opens
   useEffect(() => {
     if (open && tenant) {
-      setIsPaid(tenant.state === "paid");
+      setIsPaid(initialState ? initialState === "paid" : tenant.state === "paid");
+      setMethod(initialMethod || "UPI");
       setError("");
     }
-  }, [open, tenant]);
+  }, [open, tenant, initialState, initialMethod]);
 
-  const today = new Date();
-  const monthName = today.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const displayRent = rentAmount !== undefined ? rentAmount : tenant?.rent || 0;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -376,7 +407,7 @@ export function UpdateRentModal({ open, onClose, tenant }: { open: boolean; onCl
     setIsSubmitting(true);
     setError("");
     try {
-      await updateRentStatus(tenant.id, isPaid);
+      await updateRentStatus(tenant.id, isPaid, effectiveMonth, isPaid ? method : undefined);
       onClose();
     } catch (err: any) {
       setError(err.message || "An error occurred while updating rent status.");
@@ -388,18 +419,79 @@ export function UpdateRentModal({ open, onClose, tenant }: { open: boolean; onCl
   if (!tenant) return null;
 
   return (
-    <ActionModal isSubmitting={isSubmitting} open={open} onClose={onClose} title={`${monthName} Rent`} description={`Tenant: ${tenant.name} | Amount: ${currency(tenant.rent)}`} formId="update-rent-form" submitLabel={isSubmitting ? "Saving..." : "Save"}>
+    <ActionModal
+      isSubmitting={isSubmitting}
+      open={open}
+      onClose={onClose}
+      title={`${monthLabel} Rent Status`}
+      description={`Tenant: ${tenant.name} · Unit: ${tenant.unit} · Rent: ${currency(displayRent)}`}
+      formId="update-rent-form"
+      submitLabel={isSubmitting ? "Saving..." : isPaid ? "Mark as Paid" : "Mark as Due / Unpaid"}
+    >
       <form id="update-rent-form" onSubmit={submit} className="space-y-4">
-        <div className="flex gap-4">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="radio" name="rent_status" checked={isPaid} onChange={() => setIsPaid(true)} className="accent-[var(--color-ink)]" />
-            <span className="text-[14px] text-[var(--color-ink)] font-medium">🟢 Paid</span>
+        <div className="space-y-1.5">
+          <label className="text-[12px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">
+            Payment Status for {monthLabel}
           </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="radio" name="rent_status" checked={!isPaid} onChange={() => setIsPaid(false)} className="accent-[var(--color-ink)]" />
-            <span className="text-[14px] text-[var(--color-ink)] font-medium">🔴 Not Paid</span>
-          </label>
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => setIsPaid(true)}
+              className={cn(
+                "flex items-center justify-center gap-2 rounded-xl border p-3 font-semibold text-[13.5px] transition-all cursor-pointer",
+                isPaid
+                  ? "border-[#718355] bg-[#e9f5db] text-[#2b3428] shadow-xs ring-1 ring-[#718355]"
+                  : "border-[var(--color-line)] bg-white/70 text-[var(--color-ink-soft)] hover:bg-white"
+              )}
+            >
+              <span className="size-2.5 rounded-full bg-emerald-600" />
+              Paid
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsPaid(false)}
+              className={cn(
+                "flex items-center justify-center gap-2 rounded-xl border p-3 font-semibold text-[13.5px] transition-all cursor-pointer",
+                !isPaid
+                  ? "border-[#a35a40] bg-[#fbf0ec] text-[#783622] shadow-xs ring-1 ring-[#a35a40]"
+                  : "border-[var(--color-line)] bg-white/70 text-[var(--color-ink-soft)] hover:bg-white"
+              )}
+            >
+              <span className="size-2.5 rounded-full bg-amber-600" />
+              Due / Unpaid
+            </button>
+          </div>
         </div>
+
+        {isPaid && (
+          <div className="space-y-1.5 pt-1">
+            <label className="text-[12px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">
+              Payment Method
+            </label>
+            <Select
+              value={method}
+              onChange={(e) => setMethod(e.target.value as PaymentMethod)}
+            >
+              <option value="UPI">UPI</option>
+              <option value="Bank Transfer">Bank Transfer</option>
+              <option value="Cash">Cash</option>
+              <option value="Cheque">Cheque</option>
+            </Select>
+          </div>
+        )}
+
+        <div className="rounded-xl border border-[var(--color-line)]/70 bg-[var(--color-surface-muted)]/50 p-3 text-[12px] text-[var(--color-ink-soft)]">
+          {isPaid ? (
+            <span>
+              Marking as <strong>Paid</strong> records collection of {currency(displayRent)} for <strong>{monthLabel}</strong> without affecting any other months.
+            </span>
+          ) : (
+            <span>
+              Marking as <strong>Due / Unpaid</strong> clears recorded receipt dates for <strong>{monthLabel}</strong> and reverts its status to pending/overdue.
+            </span>
+          )}
+        </div>
+
         {error && <div className="text-[13px] text-[var(--color-critical)]">{error}</div>}
       </form>
     </ActionModal>
