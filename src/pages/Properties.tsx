@@ -167,10 +167,10 @@ export default function Properties() {
                 align="left"
                 menuClassName="left-0 sm:left-auto sm:right-0"
                 trigger={
-                  <span className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3.5 text-[13px] font-medium text-[var(--color-ink)] transition-colors hover:bg-[var(--color-surface-muted)]">
+                  <span className="inline-flex h-10 items-center gap-2 rounded-[12px] border border-white/70 bg-white/60 px-3.5 text-[13px] font-medium text-[var(--color-ink)] transition-colors hover:bg-white/80 backdrop-blur-md shadow-[inset_0_1px_2px_rgba(0,0,0,0.02),0_1px_2px_rgba(255,255,255,0.7)] cursor-pointer">
                     <ArrowDownUp className="size-4 stroke-[1.7] text-[var(--color-ink-faint)]" />
-                    <span className="text-[var(--color-ink-faint)]">Sort</span>
-                    {sortLabels[sort]}
+                    <span className="text-[var(--color-ink-faint)]">Sort:</span>
+                    <span className="font-semibold text-[var(--color-ink)]">{sortLabels[sort]}</span>
                   </span>
                 }
                 items={(Object.keys(sortLabels) as Sort[]).map((s) => ({
