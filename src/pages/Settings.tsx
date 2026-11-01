@@ -25,7 +25,7 @@ function Toggle({ defaultOn, label }: { defaultOn?: boolean; label: string }) {
       onClick={() => setOn((v) => !v)}
       className={cn(
         "relative h-6 w-11 shrink-0 rounded-full transition-colors duration-300 cursor-pointer shadow-inner focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2",
-        on ? "bg-gradient-to-r from-[var(--color-accent)] to-[#b87352]" : "bg-slate-300/80"
+        on ? "bg-gradient-to-r from-[var(--color-accent)] to-[#be7055]" : "bg-[var(--color-line-strong)]"
       )}
     >
       <span

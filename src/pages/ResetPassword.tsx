@@ -218,8 +218,8 @@ export default function ResetPassword() {
               </div>
 
               {success ? (
-                <div className="mt-8 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-5 text-center text-emerald-800 dark:text-emerald-200">
-                  <CheckCircle2 className="mx-auto size-8 text-emerald-600" />
+                <div className="mt-8 rounded-xl border border-[#8c9a6e]/30 bg-[#8c9a6e]/15 p-5 text-center text-[#2b3428]">
+                  <CheckCircle2 className="mx-auto size-8 text-[#8c9a6e]" />
                   <p className="mt-2 font-medium">Password updated successfully!</p>
                   <p className="mt-1 text-xs opacity-85">Redirecting to login...</p>
                 </div>

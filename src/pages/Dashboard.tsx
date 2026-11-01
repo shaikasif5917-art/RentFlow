@@ -47,7 +47,7 @@ export default function Dashboard() {
         value: collectedPct,
         label: "Collection progress",
       },
-      color: "bg-[#171717]", // Deep Obsidian / Black
+      color: "bg-[#2b3428]", // Deep Forest Pine (Primary anchor from palette)
       icon: Wallet,
       badge: "On track",
       actionLabel: "View Payments",
@@ -60,7 +60,7 @@ export default function Dashboard() {
       mainValue: `${portfolioStats.properties}`,
       unitSuffix: "active",
       subtitle: `${totals.properties} managed properties in your portfolio`,
-      color: "bg-[#2B7FFF]", // Royal Blue
+      color: "bg-[#414f3c]", // Deep Evergreen Olive
       icon: Building2,
       actionLabel: "View Properties",
       actionHref: "#/properties",
@@ -72,7 +72,7 @@ export default function Dashboard() {
       mainValue: `${portfolioStats.units}`,
       unitSuffix: "units",
       subtitle: `${totals.occupied} occupied · ${totals.vacant} vacant · ${totals.maintenance} maintenance`,
-      color: "bg-[#AD46FF]", // Vibrant Violet / Purple
+      color: "bg-[#8c9a6e]", // Sage Moss Green (from palette)
       icon: Layers,
       actionLabel: "Manage Units",
       actionHref: "#/properties",
@@ -84,7 +84,7 @@ export default function Dashboard() {
       mainValue: `${portfolioStats.occupancy}`,
       unitSuffix: "%",
       subtitle: totals.occupancy >= 80 ? "Healthy portfolio occupancy (≥80%)" : "Target occupancy: 90%+",
-      color: "bg-[#00B8DB]", // Electric Cyan / Teal
+      color: "bg-[#5b6e4e]", // Earthy Forest Moss
       icon: PieChart,
       actionLabel: "View Tenants",
       actionHref: "#/tenants",
@@ -97,7 +97,7 @@ export default function Dashboard() {
       unitSuffix: "vacant",
       substatus: portfolioStats.vacant > 0 ? "Needs attention" : "All units leased",
       subtitle: portfolioStats.vacant > 0 ? "Requires attention · Unit turnaround needed" : "All units currently leased",
-      color: portfolioStats.vacant > 0 ? "bg-[#E16624]" : "bg-[#F59E0B]", // Amber / Warm Orange
+      color: "bg-[#a35a40]", // Terracotta Rust (from palette)
       icon: DoorOpen,
       actionLabel: "View Vacancies",
       actionHref: "#/vacant",

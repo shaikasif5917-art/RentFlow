@@ -16,9 +16,9 @@ export function AppShell() {
     <div className="flex h-screen overflow-hidden overflow-x-hidden bg-[var(--color-canvas)] relative">
       {/* Liquid glass mesh background effect */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-[10%] top-[-10%] h-[40%] w-[40%] rounded-full bg-blue-400/10 blur-[100px]" />
-        <div className="absolute right-[-5%] top-[20%] h-[30%] w-[30%] rounded-full bg-[var(--color-accent)]/5 blur-[120px]" />
-        <div className="absolute bottom-[-10%] left-[20%] h-[40%] w-[50%] rounded-full bg-purple-400/5 blur-[120px]" />
+        <div className="absolute -left-[10%] top-[-10%] h-[45%] w-[45%] rounded-full bg-[#8c9a6e]/12 blur-[120px]" />
+        <div className="absolute right-[-5%] top-[15%] h-[35%] w-[35%] rounded-full bg-[#a35a40]/8 blur-[130px]" />
+        <div className="absolute bottom-[-10%] left-[20%] h-[45%] w-[50%] rounded-full bg-[#d8c4a8]/35 blur-[130px]" />
       </div>
       <div className="hidden lg:block">
         <Sidebar onSignOut={signOut} />

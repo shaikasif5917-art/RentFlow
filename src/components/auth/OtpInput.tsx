@@ -111,7 +111,7 @@ export function OtpInput({
                 "text-[var(--color-ink)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.02),0_1px_3px_rgba(0,0,0,0.05)]",
                 "transition-all duration-150 select-none",
                 "hover:bg-white/85 focus:border-[var(--color-accent)] focus:bg-white/95 focus:outline-none",
-                "focus:ring-4 focus:ring-[var(--color-accent)]/15 focus:shadow-[0_4px_16px_rgba(154,91,63,0.14)]",
+                "focus:ring-4 focus:ring-[var(--color-accent)]/15 focus:shadow-[0_4px_16px_rgba(163,90,64,0.14)]",
                 char ? "border-[var(--color-accent)]/50 bg-white/90 text-[var(--color-ink)]" : "",
                 disabled ? "opacity-50 cursor-not-allowed" : "cursor-text"
               )}

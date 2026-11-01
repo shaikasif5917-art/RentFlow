@@ -13,11 +13,11 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variants: Record<Variant, string> = {
   primary:
-    "bg-gradient-to-b from-[#1f2937] to-[#111827] text-white hover:from-[#111827] hover:to-black active:scale-[0.98] shadow-[0_4px_14px_rgba(17,24,39,0.2),inset_0_1px_0_rgba(255,255,255,0.22)] hover:shadow-[0_6px_20px_rgba(17,24,39,0.28)]",
+    "bg-gradient-to-b from-[#3a4736] to-[#2b3428] text-[#f3ede3] hover:from-[#2b3428] hover:to-[#1e251c] active:scale-[0.98] shadow-[0_4px_14px_rgba(43,52,40,0.24),inset_0_1px_0_rgba(255,255,255,0.18)] hover:shadow-[0_6px_20px_rgba(43,52,40,0.32)]",
   secondary:
-    "bg-white/70 backdrop-blur-md text-[var(--color-ink)] border border-white/80 hover:bg-white/95 hover:border-white active:scale-[0.98] shadow-[0_2px_8px_rgba(0,0,0,0.03),inset_0_1px_0_rgba(255,255,255,0.9)]",
+    "bg-white/80 backdrop-blur-md text-[var(--color-ink)] border border-[var(--color-line)] hover:bg-white hover:border-[var(--color-line-strong)] active:scale-[0.98] shadow-[0_2px_8px_rgba(43,52,40,0.03),inset_0_1px_0_rgba(255,255,255,0.9)]",
   subtle:
-    "bg-[var(--color-accent-wash)] text-[var(--color-accent)] border border-[var(--color-accent)]/15 hover:bg-[var(--color-accent-wash)]/80 active:scale-[0.98]",
+    "bg-[var(--color-accent-wash)] text-[var(--color-accent)] border border-[var(--color-accent)]/20 hover:bg-[var(--color-accent)]/15 active:scale-[0.98]",
   ghost:
     "text-[var(--color-ink-soft)] hover:bg-white/60 hover:backdrop-blur-sm hover:text-[var(--color-ink)] active:scale-[0.98]",
 };

@@ -360,7 +360,7 @@ export default function Login() {
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="h-12 w-full rounded-xl border border-white/80 bg-white/70 px-4 text-[14px] text-[var(--color-ink)] backdrop-blur-md shadow-[inset_0_1px_2px_rgba(0,0,0,0.02),0_1px_2px_rgba(255,255,255,0.7)] transition-all duration-200 placeholder:text-[var(--color-ink-faint)] hover:bg-white/85 focus:border-[var(--color-accent)] focus:bg-white/95 focus:outline-none focus:ring-4 focus:ring-[var(--color-accent)]/15 focus:shadow-[0_4px_16px_rgba(154,91,63,0.12)]"
+                  className="h-12 w-full rounded-xl border border-white/80 bg-white/70 px-4 text-[14px] text-[var(--color-ink)] backdrop-blur-md shadow-[inset_0_1px_2px_rgba(0,0,0,0.02),0_1px_2px_rgba(255,255,255,0.7)] transition-all duration-200 placeholder:text-[var(--color-ink-faint)] hover:bg-white/85 focus:border-[var(--color-accent)] focus:bg-white/95 focus:outline-none focus:ring-4 focus:ring-[var(--color-accent)]/15 focus:shadow-[0_4px_16px_rgba(163,90,64,0.14)]"
                 />
               </div>
             )}
@@ -373,7 +373,7 @@ export default function Login() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="h-12 w-full rounded-xl border border-white/80 bg-white/70 px-4 text-[14px] text-[var(--color-ink)] backdrop-blur-md shadow-[inset_0_1px_2px_rgba(0,0,0,0.02),0_1px_2px_rgba(255,255,255,0.7)] transition-all duration-200 placeholder:text-[var(--color-ink-faint)] hover:bg-white/85 focus:border-[var(--color-accent)] focus:bg-white/95 focus:outline-none focus:ring-4 focus:ring-[var(--color-accent)]/15 focus:shadow-[0_4px_16px_rgba(154,91,63,0.12)]"
+                  className="h-12 w-full rounded-xl border border-white/80 bg-white/70 px-4 text-[14px] text-[var(--color-ink)] backdrop-blur-md shadow-[inset_0_1px_2px_rgba(0,0,0,0.02),0_1px_2px_rgba(255,255,255,0.7)] transition-all duration-200 placeholder:text-[var(--color-ink-faint)] hover:bg-white/85 focus:border-[var(--color-accent)] focus:bg-white/95 focus:outline-none focus:ring-4 focus:ring-[var(--color-accent)]/15 focus:shadow-[0_4px_16px_rgba(163,90,64,0.14)]"
                 />
               </div>
             )}
@@ -397,7 +397,7 @@ export default function Login() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 w-full rounded-xl border border-white/80 bg-white/70 px-4 text-[14px] text-[var(--color-ink)] backdrop-blur-md shadow-[inset_0_1px_2px_rgba(0,0,0,0.02),0_1px_2px_rgba(255,255,255,0.7)] transition-all duration-200 placeholder:text-[var(--color-ink-faint)] hover:bg-white/85 focus:border-[var(--color-accent)] focus:bg-white/95 focus:outline-none focus:ring-4 focus:ring-[var(--color-accent)]/15 focus:shadow-[0_4px_16px_rgba(154,91,63,0.12)]"
+                  className="h-12 w-full rounded-xl border border-white/80 bg-white/70 px-4 text-[14px] text-[var(--color-ink)] backdrop-blur-md shadow-[inset_0_1px_2px_rgba(0,0,0,0.02),0_1px_2px_rgba(255,255,255,0.7)] transition-all duration-200 placeholder:text-[var(--color-ink-faint)] hover:bg-white/85 focus:border-[var(--color-accent)] focus:bg-white/95 focus:outline-none focus:ring-4 focus:ring-[var(--color-accent)]/15 focus:shadow-[0_4px_16px_rgba(163,90,64,0.14)]"
                 />
               </div>
             )}
@@ -486,7 +486,7 @@ export default function Login() {
           className="absolute inset-0 size-full object-cover transition-transform duration-[20s] ease-out hover:scale-105"
         />
         <div className="absolute inset-0 bg-gradient-to-tr from-black/80 via-black/20 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#1A1513]/90 via-transparent to-transparent opacity-80" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#2b3428]/95 via-transparent to-transparent opacity-85" />
         
         <div className="absolute inset-x-0 bottom-0 p-12 lg:p-16 xl:p-20 flex flex-col justify-end">
           <p className="max-w-md font-serif text-3xl md:text-4xl lg:text-[2.5rem] font-medium leading-[1.15] text-white/95 text-balance">

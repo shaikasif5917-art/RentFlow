@@ -4,34 +4,39 @@
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-serif: "Outfit", ui-serif, Georgia, serif;
 
-  /* Neutral, warm-tinted palette but slightly more modern for glass */
-  --color-canvas: #f2f5f9;
-  --color-surface: rgba(255, 255, 255, 0.75);
-  --color-surface-muted: rgba(250, 251, 253, 0.6);
-  --color-ink: #111827;
-  --color-ink-soft: #4b5563;
-  --color-ink-faint: #9ca3af;
-  --color-line: rgba(229, 231, 235, 0.6);
-  --color-line-strong: rgba(209, 213, 219, 0.8);
+  /* Japandi Organic Architectural Palette: #f3ede3, #d8c4a8, #8c9a6e, #a35a40, #2b3428 */
+  --color-canvas: #f3ede3;
+  --color-surface: rgba(255, 255, 255, 0.84);
+  --color-surface-muted: rgba(243, 237, 227, 0.65);
+  --color-ink: #2b3428;
+  --color-ink-soft: #4e5b4b;
+  --color-ink-faint: #7d8c78;
+  --color-line: rgba(216, 196, 168, 0.45);
+  --color-line-strong: rgba(216, 196, 168, 0.85);
 
-  /* Single architectural accent — a muted terracotta/clay */
-  --color-accent: #9a5b3f;
-  --color-accent-soft: #b47a5e;
-  --color-accent-wash: #f3ebe5;
+  /* Warm Sand Tan (#d8c4a8) */
+  --color-sand: #d8c4a8;
+  --color-sand-soft: #e5d7c3;
+  --color-sand-wash: #f8f4ee;
 
-  /* State colors — muted, editorial */
-  --color-positive: #4b6b52;
-  --color-positive-wash: #eaf0eb;
-  --color-warning: #9a7b3f;
-  --color-warning-wash: #f4efe3;
-  --color-critical: #94413c;
-  --color-critical-wash: #f4e8e6;
+  /* Architectural accent — Terracotta (#a35a40) */
+  --color-accent: #a35a40;
+  --color-accent-soft: #be7055;
+  --color-accent-wash: #f7ede8;
+
+  /* State colors — Sage (#8c9a6e) & Terracotta (#a35a40) */
+  --color-positive: #8c9a6e;
+  --color-positive-wash: #f0f3eb;
+  --color-warning: #c2883c;
+  --color-warning-wash: #f8f2e6;
+  --color-critical: #a35a40;
+  --color-critical-wash: #f9eae5;
 
   --radius-card: 20px;
 
-  --shadow-soft: 0 4px 14px 0 rgba(0, 0, 0, 0.05), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
-  --shadow-lift: 0 10px 40px -10px rgba(0, 0, 0, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.6);
-  --shadow-panel: 0 24px 60px -24px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+  --shadow-soft: 0 4px 14px 0 rgba(43, 52, 40, 0.05), inset 0 0 0 1px rgba(255, 255, 255, 0.65);
+  --shadow-lift: 0 10px 40px -10px rgba(43, 52, 40, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.75);
+  --shadow-panel: 0 24px 60px -24px rgba(43, 52, 40, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.85);
 }
 
 html,
@@ -65,12 +70,12 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #dcd8d1;
+  background: #d8c4a8;
   border-radius: 999px;
   border: 3px solid var(--color-canvas);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #cac5bc;
+  background: #c7b293;
 }
 
 @keyframes fade-rise {

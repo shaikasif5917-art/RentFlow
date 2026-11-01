@@ -39,13 +39,13 @@ function Figure({
 export function PortfolioSummary({ totals }: { totals: Totals }) {
   const { units, occupied, vacant, maintenance } = totals;
   const parts = [
-    { key: "occ", n: occupied, cls: "bg-gradient-to-r from-emerald-600 to-teal-500 shadow-[0_0_8px_rgba(16,185,129,0.25)]" },
-    { key: "vac", n: vacant, cls: "bg-gradient-to-r from-amber-500 to-amber-600 shadow-[0_0_8px_rgba(245,158,11,0.25)]" },
-    { key: "mnt", n: maintenance, cls: "bg-gradient-to-r from-[var(--color-accent)] to-[#b47a5e] shadow-[0_0_8px_rgba(154,91,63,0.25)]" },
+    { key: "occ", n: occupied, cls: "bg-gradient-to-r from-[#8c9a6e] to-[#718055] shadow-[0_0_8px_rgba(140,154,110,0.3)]" },
+    { key: "vac", n: vacant, cls: "bg-gradient-to-r from-[#d8c4a8] to-[#c2ad8e] shadow-[0_0_8px_rgba(216,196,168,0.3)]" },
+    { key: "mnt", n: maintenance, cls: "bg-gradient-to-r from-[var(--color-accent)] to-[#bc6e52] shadow-[0_0_8px_rgba(163,90,64,0.25)]" },
   ].filter((p) => p.n > 0);
 
   return (
-    <Surface elevated className="relative overflow-hidden p-4 sm:p-5 md:p-7 bg-gradient-to-br from-white/95 via-white/85 to-[#fdf8f5]/75">
+    <Surface elevated className="relative overflow-hidden p-4 sm:p-5 md:p-7 bg-gradient-to-br from-white/95 via-white/85 to-[#f7ede8]/75">
       <div className="pointer-events-none absolute -right-16 -top-16 size-40 sm:size-56 rounded-full bg-[var(--color-accent)]/10 blur-2xl sm:blur-3xl" />
       <div className="relative z-10 grid gap-4 sm:gap-7 lg:grid-cols-[auto_1fr] lg:gap-14">
         {/* anchor figures */}
