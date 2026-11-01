@@ -47,7 +47,7 @@ export default function Dashboard() {
         value: collectedPct,
         label: "Collection progress",
       },
-      color: "bg-[#4d243d]", // Deep Blackberry Plum Wine (Anchor color from palette)
+      color: "bg-[#432818]", // Deep Roasted Espresso (High-contrast luxury anchor)
       textColor: "light",
       icon: Wallet,
       badge: "On track",
