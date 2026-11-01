@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { Building2 } from "lucide-react";
 import { cn } from "../../utils/cn";
+import { FALLBACK_PROPERTY_IMAGE } from "../../utils/propertyImages";
 
 interface PropertyThumbnailProps {
   src: string;
@@ -31,7 +32,21 @@ export function PropertyThumbnail({
   className,
   imgClassName,
 }: PropertyThumbnailProps) {
+  const [currentSrc, setCurrentSrc] = useState(src || FALLBACK_PROPERTY_IMAGE);
   const [failed, setFailed] = useState(false);
+
+  // Sync if prop changes
+  if (src && currentSrc !== src && !failed) {
+    setCurrentSrc(src);
+  }
+
+  const handleError = () => {
+    if (currentSrc !== FALLBACK_PROPERTY_IMAGE) {
+      setCurrentSrc(FALLBACK_PROPERTY_IMAGE);
+    } else {
+      setFailed(true);
+    }
+  };
 
   return (
     <div
@@ -47,10 +62,11 @@ export function PropertyThumbnail({
         </div>
       ) : (
         <img
-          src={src}
+          src={currentSrc}
           alt={alt}
           loading="lazy"
-          onError={() => setFailed(true)}
+          decoding="async"
+          onError={handleError}
           className={cn(
             "size-full object-cover transition-transform duration-[700ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
             interactive && "group-hover/card:scale-[1.035]",

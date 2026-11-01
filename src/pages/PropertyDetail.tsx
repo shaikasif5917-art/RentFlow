@@ -12,6 +12,7 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { StateText } from "../components/ui/StateText";
 import { PropertyThumbnail } from "../components/ui/PropertyThumbnail";
 import { PropertyFormModal } from "../components/property/PropertyFormModal";
+import { getPropertyImages } from "../utils/propertyImages";
 import { AddExpenseModal, AddUnitModal, AssignTenantModal, RecordRentModal } from "../components/property/UnitModals";
 import { UnitsSection } from "../components/property/UnitsSection";
 import {
@@ -155,19 +156,23 @@ export default function PropertyDetail() {
       </div>
 
       {/* image composition — supports the data, never dominates it */}
-      <div className="grid h-[220px] grid-cols-1 gap-3 sm:h-[300px] lg:h-[340px] lg:grid-cols-[2fr_1fr]">
-        <PropertyThumbnail
-          src={property.image}
-          alt={`${property.name} exterior`}
-          className="h-full !aspect-auto rounded-[14px]"
-        />
-        <PropertyThumbnail
-          src={property.secondaryImage ?? property.image}
-          alt={`${property.name} detail`}
-          className="hidden h-full !aspect-auto rounded-[14px] lg:block"
-          imgClassName={property.secondaryImage ? "" : "scale-[1.6] object-[70%_40%]"}
-        />
-      </div>
+      {(() => {
+        const images = getPropertyImages(property);
+        return (
+          <div className="grid h-[220px] grid-cols-1 gap-3 sm:h-[300px] lg:h-[340px] lg:grid-cols-[2fr_1fr]">
+            <PropertyThumbnail
+              src={images.primary}
+              alt={`${property.name} exterior`}
+              className="h-full !aspect-auto rounded-[14px]"
+            />
+            <PropertyThumbnail
+              src={images.secondary}
+              alt={`${property.name} detail`}
+              className="hidden h-full !aspect-auto rounded-[14px] lg:block"
+            />
+          </div>
+        );
+      })()}
 
       <FinancialSnapshot m={m} />
       <OccupancySection units={pUnits} tenants={pTenants} m={m} />

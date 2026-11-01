@@ -7,6 +7,7 @@ import type { Unit } from "../../data/types";
 import { PropertyThumbnail } from "../ui/PropertyThumbnail";
 import { StateText } from "../ui/StateText";
 import { UnitStrip } from "./UnitStrip";
+import { getPropertyImage } from "../../utils/propertyImages";
 
 export interface PropertyRowData {
   property: Property;
@@ -21,9 +22,10 @@ function rentFigure(m: PropertyMetrics) {
 }
 
 /** Editorial grid item — image first, typography does the rest. */
-export function PropertyCard({ data }: { data: PropertyRowData }) {
+export function PropertyCard({ data, index }: { data: PropertyRowData; index?: number }) {
   const { property: p, units, metrics: m } = data;
   const rent = rentFigure(m);
+  const imageUrl = getPropertyImage(p, index);
 
   return (
     <Link
@@ -32,7 +34,7 @@ export function PropertyCard({ data }: { data: PropertyRowData }) {
     >
       <article className="overflow-hidden rounded-[20px] border border-white/60 bg-white/50 p-3.5 backdrop-blur-md shadow-[0_2px_12px_rgba(0,0,0,0.03)] transition-all duration-300 ease-out hover:-translate-y-1.5 hover:border-white/95 hover:bg-white/85 hover:shadow-[var(--shadow-lift)]">
         <PropertyThumbnail
-          src={p.image}
+          src={imageUrl}
           alt={`${p.name}, ${p.locality}`}
           ratio="landscape"
           interactive

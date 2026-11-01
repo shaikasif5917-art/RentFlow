@@ -1,7 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
-  typeImages,
   type ActivityItem,
   type ActivityType,
   type PaymentMethod,
@@ -16,6 +15,7 @@ import {
 import { currency } from "../utils/format";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
+import { getPropertyImage, getPropertyImages } from "../utils/propertyImages";
 
 export interface NewPropertyInput {
   name: string;
@@ -73,18 +73,28 @@ function unitNumbers(count: number) {
   return Array.from({ length: count }, (_, i) => `${Math.floor(i / 4) + 1}0${(i % 4) + 1}`);
 }
 
-const mapProperty = (row: any): Property => ({
-  id: row.id,
-  name: row.name,
-  address: row.address,
-  locality: row.locality,
-  city: row.city,
-  type: row.type as PropertyType,
-  image: row.image,
-  secondaryImage: row.secondary_image,
-  depositPerUnit: row.deposit_per_unit,
-  notes: row.notes,
-});
+const mapProperty = (row: any): Property => {
+  const images = getPropertyImages({
+    id: row.id,
+    name: row.name,
+    type: row.type,
+    image: row.image,
+    secondaryImage: row.secondary_image,
+  });
+
+  return {
+    id: row.id,
+    name: row.name,
+    address: row.address,
+    locality: row.locality,
+    city: row.city,
+    type: row.type as PropertyType,
+    image: images.primary,
+    secondaryImage: images.secondary,
+    depositPerUnit: row.deposit_per_unit,
+    notes: row.notes,
+  };
+};
 
 const mapUnit = (row: any): Unit => ({
   id: row.id,
@@ -307,7 +317,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
             locality: input.locality.trim(),
             city: input.city.trim() || "Hyderabad",
             type: input.type,
-            image: input.image || typeImages[input.type],
+            image: input.image || getPropertyImage({ id: `prop-${Date.now()}`, name: input.name, type: input.type }),
             deposit_per_unit: input.deposit,
             notes: input.notes.trim(),
           })

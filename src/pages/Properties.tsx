@@ -221,8 +221,8 @@ export default function Properties() {
             </Surface>
           ) : view === "grid" ? (
             <div key="grid" className="animate-fade-rise grid gap-x-7 gap-y-10 sm:grid-cols-2 xl:grid-cols-3">
-              {visible.map((r) => (
-                <PropertyCard key={r.property.id} data={r} />
+              {visible.map((r, i) => (
+                <PropertyCard key={r.property.id} data={r} index={i} />
               ))}
             </div>
           ) : (
@@ -236,8 +236,8 @@ export default function Properties() {
                 <span className="text-right">State</span>
               </div>
               <div className="divide-y divide-[var(--color-line)]">
-                {visible.map((r) => (
-                  <PropertyListRow key={r.property.id} data={r} />
+                {visible.map((r, i) => (
+                  <PropertyListRow key={r.property.id} data={r} index={i} />
                 ))}
               </div>
             </Surface>

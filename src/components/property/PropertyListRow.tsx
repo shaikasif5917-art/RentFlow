@@ -6,13 +6,15 @@ import { PropertyThumbnail } from "../ui/PropertyThumbnail";
 import { StateText } from "../ui/StateText";
 import { UnitStrip } from "./UnitStrip";
 import type { PropertyRowData } from "./PropertyCard";
+import { getPropertyImage } from "../../utils/propertyImages";
 
 export const listGrid = "md:grid-cols-[minmax(0,2.3fr)_minmax(0,1.6fr)_minmax(0,1fr)_128px]";
 
 /** Dense-but-calm list alternative to the grid. */
-export function PropertyListRow({ data }: { data: PropertyRowData }) {
+export function PropertyListRow({ data, index }: { data: PropertyRowData; index?: number }) {
   const { property: p, units, metrics: m } = data;
   const rent = m.expected > 0 ? m.expected : m.potential;
+  const imageUrl = getPropertyImage(p, index);
 
   return (
     <Link
@@ -22,7 +24,7 @@ export function PropertyListRow({ data }: { data: PropertyRowData }) {
       {/* identity */}
       <div className="col-span-2 flex min-w-0 items-center gap-4 md:col-span-1">
         <PropertyThumbnail
-          src={p.image}
+          src={imageUrl}
           alt={p.name}
           ratio="landscape"
           interactive

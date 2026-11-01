@@ -149,15 +149,12 @@ export function slugify(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-const px = (id: number) =>
-  `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=800&w=1200`;
-
 /** Fallback imagery by type — used when a new property has no photo. */
 export const typeImages: Record<PropertyType, string> = {
-  Apartment: px(1099065),
-  "Independent House": px(19510801),
-  Villa: px(13600836),
-  Shop: px(8228650),
-  Office: px(26241922),
-  Other: px(11861957),
+  Apartment: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80",
+  "Independent House": "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1200&q=80",
+  Villa: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80",
+  Shop: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80",
+  Office: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80",
+  Other: "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1200&q=80",
 };
