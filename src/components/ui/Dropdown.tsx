@@ -39,7 +39,7 @@ export function Dropdown({ trigger, items, align = "right", className, menuClass
       {open && (
         <div
           className={cn(
-            "animate-sheet-in absolute z-50 mt-2 min-w-[200px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[14px] border border-white/80 bg-white/90 p-1.5 shadow-[var(--shadow-panel)] backdrop-blur-2xl",
+            "animate-sheet-in absolute z-50 mt-2 min-w-[200px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[14px] border border-[#cfe1b9]/80 bg-white/95 p-1.5 shadow-[var(--shadow-panel)] backdrop-blur-2xl",
             align === "right" ? "right-0" : "left-0",
             menuClassName
           )}
@@ -52,16 +52,16 @@ export function Dropdown({ trigger, items, align = "right", className, menuClass
                 setOpen(false);
               }}
               className={cn(
-                "flex w-full items-center gap-2.5 rounded-[10px] px-3 py-2 text-left text-[13px] font-medium transition-all duration-150 cursor-pointer hover:bg-[var(--color-accent-wash)]/70 hover:text-[var(--color-accent)]",
+                "flex w-full items-center gap-2.5 rounded-[10px] px-3 py-2 text-left text-[13px] font-medium transition-all duration-150 cursor-pointer hover:bg-[#e9f5db] hover:text-[#2b3428]",
                 item.tone === "critical"
-                  ? "text-[var(--color-critical)] hover:bg-rose-50 hover:text-rose-700"
-                  : "text-[var(--color-ink-soft)]",
+                  ? "text-rose-700 hover:bg-rose-50"
+                  : "text-[#414f3c]",
                 "[&>svg]:size-[16px] [&>svg]:stroke-[1.7]",
               )}
             >
               {item.icon}
               <span className="flex-1">{item.label}</span>
-              {item.active && <Check className="!size-[15px] text-[var(--color-accent)]" />}
+              {item.active && <Check className="!size-[15px] text-[#718355]" />}
             </button>
           ))}
         </div>

@@ -12,7 +12,7 @@ export function BrandMark({ className, compact }: { className?: string; compact?
       {!compact && (
         <div className="flex flex-col leading-none">
           <span className="font-serif text-[17px] font-semibold tracking-[-0.01em] text-[var(--color-ink)]">
-            RentFlow
+            RentFloww
           </span>
           <span className="mt-1 text-[9px] font-bold uppercase tracking-[0.2em] text-[var(--color-ink-faint)]">
             Property Management

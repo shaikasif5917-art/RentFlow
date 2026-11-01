@@ -62,7 +62,7 @@ export default function Setup() {
       <Surface elevated className="w-full max-w-md overflow-hidden p-6 sm:p-8">
         <div className="mb-8 space-y-2 text-center">
           <h1 className="text-2xl font-bold tracking-tight text-[var(--color-ink)]">
-            Welcome to RentFlow
+            Welcome to RentFloww
           </h1>
           <p className="text-[14px] text-[var(--color-ink-soft)]">
             Let's configure your default rent collection rules.

@@ -495,7 +495,7 @@ export default function Login() {
           <div className="mt-8 flex items-center gap-4">
             <div className="h-px w-8 bg-white/30" />
             <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/70">
-              RentFlow · Property Management
+              RentFloww · Property Management
             </p>
           </div>
         </div>
