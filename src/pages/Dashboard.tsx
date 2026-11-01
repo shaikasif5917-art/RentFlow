@@ -47,7 +47,7 @@ export default function Dashboard() {
         value: collectedPct,
         label: "Collection progress",
       },
-      color: "bg-[#344229]", // Deep Forest Sage (High-contrast anchor of the palette)
+      color: "bg-[#2b3428]", // Deep Forest Pine (Image 2 - Primary anchor)
       textColor: "light",
       icon: Wallet,
       badge: "On track",
@@ -61,7 +61,7 @@ export default function Dashboard() {
       mainValue: `${portfolioStats.properties}`,
       unitSuffix: "active",
       subtitle: `${totals.properties} managed properties in your portfolio`,
-      color: "bg-[#718355]", // Deep Reseda Sage (from palette)
+      color: "bg-[#414f3c]", // Deep Evergreen Olive (Image 2)
       textColor: "light",
       icon: Building2,
       actionLabel: "View Properties",
@@ -74,7 +74,7 @@ export default function Dashboard() {
       mainValue: `${portfolioStats.units}`,
       unitSuffix: "units",
       subtitle: `${totals.occupied} occupied · ${totals.vacant} vacant · ${totals.maintenance} maintenance`,
-      color: "bg-[#87986a]", // Earthy Fern Green (from palette)
+      color: "bg-[#8c9a6e]", // Sage Moss Green (Image 2)
       textColor: "light",
       icon: Layers,
       actionLabel: "Manage Units",
@@ -87,8 +87,8 @@ export default function Dashboard() {
       mainValue: `${portfolioStats.occupancy}`,
       unitSuffix: "%",
       subtitle: totals.occupancy >= 80 ? "Healthy portfolio occupancy (≥80%)" : "Target occupancy: 90%+",
-      color: "bg-[#b5c99a]", // Sage Leaf Green (from palette)
-      textColor: "dark",
+      color: "bg-[#5b6e4e]", // Earthy Forest Moss (Image 2)
+      textColor: "light",
       icon: PieChart,
       actionLabel: "View Tenants",
       actionHref: "#/tenants",
@@ -101,8 +101,8 @@ export default function Dashboard() {
       unitSuffix: "vacant",
       substatus: portfolioStats.vacant > 0 ? "Needs attention" : "All units leased",
       subtitle: portfolioStats.vacant > 0 ? "Requires attention · Unit turnaround needed" : "All units currently leased",
-      color: "bg-[#cfe1b9]", // Soft Matcha Dew (from palette)
-      textColor: "dark",
+      color: "bg-[#a35a40]", // Terracotta Rust (Image 2)
+      textColor: "light",
       icon: DoorOpen,
       actionLabel: "View Vacancies",
       actionHref: "#/vacant",
