@@ -13,6 +13,24 @@ export function getCurrentBillingMonth(asOf: Date = new Date()): string {
 }
 
 /**
+ * Returns the active billing cycle month being collected as of a given moment.
+ * - In Prepaid: Rent is collected in advance for the current calendar month.
+ * - In Postpaid: Rent is collected in arrears for the preceding calendar month.
+ */
+export function getActiveCollectionMonth(
+  method: RentCollectionMethod = "prepaid",
+  asOf: Date = new Date(),
+): string {
+  if (method === "postpaid") {
+    const prev = new Date(asOf.getFullYear(), asOf.getMonth() - 1, 1);
+    const year = prev.getFullYear();
+    const month = String(prev.getMonth() + 1).padStart(2, "0");
+    return `${year}-${month}-01`;
+  }
+  return getCurrentBillingMonth(asOf);
+}
+
+/**
  * Parses a "YYYY-MM-DD" or "YYYY-MM" string into local year and month numbers.
  */
 export function parseBillingMonth(billingMonth: string): { year: number; monthIndex: number } {

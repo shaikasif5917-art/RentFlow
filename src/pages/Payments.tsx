@@ -28,6 +28,37 @@ export default function Payments() {
     return Array.from(m).sort().reverse();
   }, [payments]);
 
+  // Dynamically compute summary figures directly from the actual Supabase payment records
+  const summaryTotals = useMemo(() => {
+    // If a specific month is selected, compute for that month
+    // If "all" is selected, compute across all payments in the ledger (or active cycle)
+    const targetPayments = monthFilter === "all"
+      ? payments
+      : payments.filter((p) => p.billingMonth === monthFilter);
+
+    if (targetPayments.length === 0) {
+      return {
+        collected: totals.collected,
+        outstanding: totals.outstanding,
+        expected: totals.expected,
+        pendingCount: tenants.filter((t) => t.state !== "paid").length,
+      };
+    }
+
+    const collected = targetPayments
+      .filter((p) => p.state === "paid")
+      .reduce((sum, p) => sum + p.amount, 0);
+
+    const outstanding = targetPayments
+      .filter((p) => p.state !== "paid")
+      .reduce((sum, p) => sum + p.amount, 0);
+
+    const expected = collected + outstanding;
+    const pendingCount = targetPayments.filter((p) => p.state !== "paid").length;
+
+    return { collected, outstanding, expected, pendingCount };
+  }, [payments, monthFilter, totals, tenants]);
+
   const visiblePayments = useMemo(() => {
     const q = query.trim().toLowerCase();
     return payments.filter((p) => {
@@ -37,8 +68,6 @@ export default function Payments() {
       return matchQuery && matchState && matchMonth;
     });
   }, [payments, query, filterState, monthFilter]);
-
-  const pending = visiblePayments.filter((p) => p.state !== "paid");
 
   const handleExport = () => {
     const headers = ["Tenant", "Property", "Unit", "Amount", "Method", "Status", "Date", "Billing Month"];
@@ -73,17 +102,17 @@ export default function Payments() {
       <div className="grid grid-cols-2 gap-3 sm:gap-5 sm:grid-cols-3">
         <Surface elevated className="relative overflow-hidden p-4 sm:p-6 transition-all duration-300 hover:-translate-y-1">
           <div className="pointer-events-none absolute -right-6 -bottom-6 size-16 sm:size-24 rounded-full bg-emerald-500/10 blur-xl sm:blur-2xl" />
-          <StatDisplay label="Collected" value={currency(totals.collected, { compact: true })} />
+          <StatDisplay label="Collected" value={currency(summaryTotals.collected, { compact: true })} />
         </Surface>
         <Surface elevated className="relative overflow-hidden p-4 sm:p-6 transition-all duration-300 hover:-translate-y-1">
           <div className="pointer-events-none absolute -right-6 -bottom-6 size-16 sm:size-24 rounded-full bg-rose-500/10 blur-xl sm:blur-2xl" />
           <StatDisplay
             label="Outstanding"
-            value={currency(totals.outstanding, { compact: true })}
-            tone={totals.outstanding > 0 ? "critical" : "default"}
+            value={currency(summaryTotals.outstanding, { compact: true })}
+            tone={summaryTotals.outstanding > 0 ? "critical" : "default"}
             hint={
-              pending.length > 0 ? (
-                <span className="font-medium text-[var(--color-warning)]">{plural(pending.length, "pending")}</span>
+              summaryTotals.pendingCount > 0 ? (
+                <span className="font-medium text-[var(--color-warning)]">{plural(summaryTotals.pendingCount, "pending")}</span>
               ) : (
                 "All clear"
               )
@@ -92,7 +121,7 @@ export default function Payments() {
         </Surface>
         <Surface elevated className="col-span-2 sm:col-span-1 relative overflow-hidden p-4 sm:p-6 transition-all duration-300 hover:-translate-y-1">
           <div className="pointer-events-none absolute -right-6 -bottom-6 size-16 sm:size-24 rounded-full bg-blue-500/10 blur-xl sm:blur-2xl" />
-          <StatDisplay label="Expected" value={currency(totals.expected, { compact: true })} />
+          <StatDisplay label="Expected" value={currency(summaryTotals.expected, { compact: true })} />
         </Surface>
       </div>
 

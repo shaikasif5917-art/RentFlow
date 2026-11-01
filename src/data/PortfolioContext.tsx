@@ -17,7 +17,7 @@ import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { getPropertyImage, getPropertyImages } from "../utils/propertyImages";
 import {
-  getCurrentBillingMonth,
+  getActiveCollectionMonth,
   isPaymentOverdue,
   calculatePaymentState,
   isTenantLiableForBillingMonth,
@@ -237,8 +237,8 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       });
 
       const today = new Date();
-      const currentBillingMonth = getCurrentBillingMonth(today);
       const method = (profile?.rent_collection_method as RentCollectionMethod) || "prepaid";
+      const currentBillingMonth = getActiveCollectionMonth(method, today);
       const dueDay = profile?.default_due_day || 1;
       const grace = profile?.grace_period_days || 0;
 
@@ -566,11 +566,11 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
         }
 
         const today = new Date();
-        const billingMonth = getCurrentBillingMonth(today);
-        const method = (profile?.rent_collection_method as RentCollectionMethod) || "prepaid";
+        const collectionMethod = (profile?.rent_collection_method as RentCollectionMethod) || "prepaid";
+        const billingMonth = getActiveCollectionMonth(collectionMethod, today);
         const dueDay = profile?.default_due_day || 1;
         const grace = profile?.grace_period_days || 0;
-        const isOverdue = isPaymentOverdue(billingMonth, method, dueDay, grace, today);
+        const isOverdue = isPaymentOverdue(billingMonth, collectionMethod, dueDay, grace, today);
 
         const { error: paymentError } = await supabase.from("payments").insert({
           owner_id: user.id,
@@ -613,7 +613,8 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       if (!unit || !tenant) return;
       
       const today = new Date();
-      const billingMonth = getCurrentBillingMonth(today);
+      const collectionMethod = (profile?.rent_collection_method as RentCollectionMethod) || "prepaid";
+      const billingMonth = getActiveCollectionMonth(collectionMethod, today);
 
       try {
         const { error: paymentError } = await supabase.from("payments").upsert({
@@ -638,7 +639,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
         throw err;
       }
     },
-    [user, units, tenants, fetchPortfolio, log],
+    [user, units, tenants, profile, fetchPortfolio, log],
   );
 
   const updateRentStatus = useCallback<PortfolioContextValue["updateRentStatus"]>(
@@ -649,8 +650,8 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       if (!tenant || !unit) return;
 
       const today = new Date();
-      const billingMonth = getCurrentBillingMonth(today);
-      const method = (profile?.rent_collection_method as RentCollectionMethod) || "prepaid";
+      const collectionMethod = (profile?.rent_collection_method as RentCollectionMethod) || "prepaid";
+      const billingMonth = getActiveCollectionMonth(collectionMethod, today);
       const dueDay = profile?.default_due_day || 1;
       const grace = profile?.grace_period_days || 0;
 
@@ -673,7 +674,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
             ? existingPayment.recordedAt 
             : new Date().toISOString();
         } else {
-          const isOverdue = isPaymentOverdue(billingMonth, method, dueDay, grace, today);
+          const isOverdue = isPaymentOverdue(billingMonth, collectionMethod, dueDay, grace, today);
           payload.state = isOverdue ? "overdue" : "due";
           payload.payment_date = null;
           payload.method = null;
@@ -800,7 +801,8 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
         // Also update any pending (unpaid) payment record for the current billing cycle
         // Historical and already-paid payments remain completely intact
         const today = new Date();
-        const currentBillingMonth = getCurrentBillingMonth(today);
+        const collectionMethod = (profile?.rent_collection_method as RentCollectionMethod) || "prepaid";
+        const currentBillingMonth = getActiveCollectionMonth(collectionMethod, today);
         await supabase
           .from("payments")
           .update({ amount: newRent })
@@ -815,7 +817,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
         throw err;
       }
     },
-    [user, tenants, fetchPortfolio, log],
+    [user, tenants, profile, fetchPortfolio, log],
   );
 
   const updateTenantName = useCallback<PortfolioContextValue["updateTenantName"]>(
