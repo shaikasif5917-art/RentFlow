@@ -17,6 +17,7 @@ export interface CarouselCard {
     label?: string;
   };
   color: string;
+  textColor?: "light" | "dark";
   icon: React.ElementType;
   badge?: string;
   actionLabel?: string;
@@ -68,125 +69,183 @@ export const MinimalCarousel: React.FC<MinimalCarouselProps> = ({
       <motion.div layout className="flex flex-col gap-2.5 sm:gap-3">
         {/* Expanded Hero Card */}
         <AnimatePresence mode="popLayout">
-          {activeCard && (
-            <motion.div
-              key={activeCard.id}
-              layoutId={activeCard.id}
-              className={`relative flex w-full flex-col justify-between overflow-hidden
-                         rounded-[24px] sm:rounded-[32px] p-4.5 sm:p-7 text-white shadow-lg sm:shadow-2xl
-                         ${activeCard.color}
-                         min-h-[160px] sm:min-h-[200px]`}
-              transition={{ type: "spring", bounce: 0.18, duration: 0.55 }}
-            >
-              {/* Decorative background glow */}
-              <div className="pointer-events-none absolute -right-10 -bottom-10 size-48 rounded-full bg-white/10 blur-2xl" />
+          {activeCard && (() => {
+            const isDarkText = activeCard.textColor === "dark";
+            return (
+              <motion.div
+                key={activeCard.id}
+                layoutId={activeCard.id}
+                className={`relative flex w-full flex-col justify-between overflow-hidden
+                           rounded-[24px] sm:rounded-[32px] p-4.5 sm:p-7 shadow-lg sm:shadow-2xl
+                           ${activeCard.color}
+                           ${isDarkText ? "text-[#4d243d] border border-[#4d243d]/12" : "text-white"}
+                           min-h-[160px] sm:min-h-[200px]`}
+                transition={{ type: "spring", bounce: 0.18, duration: 0.55 }}
+              >
+                {/* Decorative background glow */}
+                <div
+                  className={`pointer-events-none absolute -right-10 -bottom-10 size-48 rounded-full blur-2xl ${
+                    isDarkText ? "bg-[#4d243d]/5" : "bg-white/10"
+                  }`}
+                />
 
-              {/* Header row */}
-              <div className="relative z-10 flex items-start justify-between gap-3">
-                <div className="flex items-center gap-2.5 sm:gap-3">
-                  <div className="flex size-10 sm:size-13 items-center justify-center rounded-xl sm:rounded-2xl bg-white/15 backdrop-blur-md shrink-0 shadow-inner">
-                    <activeCard.icon className="size-5 sm:size-7 text-white" />
-                  </div>
-                  {activeCard.badge && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 sm:py-1 text-[11px] sm:text-xs font-semibold backdrop-blur-md">
-                      <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      {activeCard.badge}
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <motion.button
-                    initial={{ opacity: 0, scale: 0.85 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    type="button"
-                    onClick={(e) => handleCopy(activeCard, e)}
-                    className="flex items-center gap-1.5 rounded-full bg-white/15 hover:bg-white/25
-                               px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-[13px] font-semibold backdrop-blur-md 
-                               text-white transition-all cursor-pointer shadow-sm active:scale-95"
-                    title="Copy details"
-                  >
-                    {copiedId === activeCard.id ? (
-                      <>
-                        <Check className="size-3.5 text-emerald-300" />
-                        <span>Copied</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="size-3.5 opacity-80" />
-                        <span>Copy</span>
-                      </>
+                {/* Header row */}
+                <div className="relative z-10 flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2.5 sm:gap-3">
+                    <div
+                      className={`flex size-10 sm:size-13 items-center justify-center rounded-xl sm:rounded-2xl backdrop-blur-md shrink-0 shadow-inner ${
+                        isDarkText ? "bg-[#4d243d]/10 text-[#4d243d]" : "bg-white/15 text-white"
+                      }`}
+                    >
+                      <activeCard.icon className="size-5 sm:size-7" />
+                    </div>
+                    {activeCard.badge && (
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 sm:py-1 text-[11px] sm:text-xs font-semibold backdrop-blur-md ${
+                          isDarkText ? "bg-[#4d243d]/10 text-[#4d243d]" : "bg-white/20 text-white"
+                        }`}
+                      >
+                        <span
+                          className={`size-1.5 rounded-full animate-pulse ${
+                            isDarkText ? "bg-[#4d243d]" : "bg-emerald-400"
+                          }`}
+                        />
+                        {activeCard.badge}
+                      </span>
                     )}
-                  </motion.button>
-                </div>
-              </div>
+                  </div>
 
-              {/* Body & Action row */}
-              <div className="relative z-10 mt-3 sm:mt-5">
-                <div className="flex flex-wrap items-end justify-between gap-3 sm:gap-4">
-                  <div className="overflow-hidden pr-2">
-                    <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-white/70">
-                      {activeCard.title}
-                    </p>
-                    <div className="mt-0.5 flex items-baseline gap-1.5 flex-wrap">
-                      <h3 className="text-2xl sm:text-4xl lg:text-[2.6rem] font-bold tracking-tight text-white leading-tight">
-                        {activeCard.mainValue || activeCard.value}
-                      </h3>
-                      {activeCard.unitSuffix && (
-                        <span className="text-base sm:text-2xl font-normal text-white/80">
-                          {activeCard.unitSuffix}
-                        </span>
+                  <div className="flex items-center gap-2">
+                    <motion.button
+                      initial={{ opacity: 0, scale: 0.85 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      type="button"
+                      onClick={(e) => handleCopy(activeCard, e)}
+                      className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-[13px] font-semibold backdrop-blur-md transition-all cursor-pointer shadow-sm active:scale-95 ${
+                        isDarkText
+                          ? "bg-[#4d243d]/10 hover:bg-[#4d243d]/18 text-[#4d243d]"
+                          : "bg-white/15 hover:bg-white/25 text-white"
+                      }`}
+                      title="Copy details"
+                    >
+                      {copiedId === activeCard.id ? (
+                        <>
+                          <Check className={`size-3.5 ${isDarkText ? "text-[#4d243d]" : "text-emerald-300"}`} />
+                          <span>Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="size-3.5 opacity-80" />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </motion.button>
+                  </div>
+                </div>
+
+                {/* Body & Action row */}
+                <div className="relative z-10 mt-3 sm:mt-5">
+                  <div className="flex flex-wrap items-end justify-between gap-3 sm:gap-4">
+                    <div className="overflow-hidden pr-2">
+                      <p
+                        className={`text-[11px] sm:text-xs font-semibold uppercase tracking-wider ${
+                          isDarkText ? "text-[#4d243d]/70" : "text-white/70"
+                        }`}
+                      >
+                        {activeCard.title}
+                      </p>
+                      <div className="mt-0.5 flex items-baseline gap-1.5 flex-wrap">
+                        <h3
+                          className={`text-2xl sm:text-4xl lg:text-[2.6rem] font-bold tracking-tight leading-tight ${
+                            isDarkText ? "text-[#4d243d]" : "text-white"
+                          }`}
+                        >
+                          {activeCard.mainValue || activeCard.value}
+                        </h3>
+                        {activeCard.unitSuffix && (
+                          <span
+                            className={`text-base sm:text-2xl font-normal ${
+                              isDarkText ? "text-[#4d243d]/80" : "text-white/80"
+                            }`}
+                          >
+                            {activeCard.unitSuffix}
+                          </span>
+                        )}
+                      </div>
+
+                      {activeCard.trend && (
+                        <div
+                          className={`mt-1 flex items-center gap-1.5 text-[12px] sm:text-[13.5px] font-medium ${
+                            isDarkText ? "text-[#4d243d]/90" : "text-white/90"
+                          }`}
+                        >
+                          <ArrowUpRight className="size-3.5 sm:size-4 shrink-0 stroke-[2.5]" />
+                          <span>{activeCard.trend}</span>
+                        </div>
+                      )}
+
+                      {activeCard.subtitle && !activeCard.trend && (
+                        <p
+                          className={`mt-1 text-[11.5px] sm:text-[13.5px] font-medium leading-snug ${
+                            isDarkText ? "text-[#4d243d]/80" : "text-white/80"
+                          }`}
+                        >
+                          {activeCard.subtitle}
+                        </p>
                       )}
                     </div>
 
-                    {activeCard.trend && (
-                      <div className="mt-1 flex items-center gap-1.5 text-[12px] sm:text-[13.5px] font-medium text-white/90">
-                        <ArrowUpRight className="size-3.5 sm:size-4 shrink-0 stroke-[2.5]" />
-                        <span>{activeCard.trend}</span>
-                      </div>
-                    )}
-
-                    {activeCard.subtitle && !activeCard.trend && (
-                      <p className="mt-1 text-[11.5px] sm:text-[13.5px] font-medium text-white/80 leading-snug">
-                        {activeCard.subtitle}
-                      </p>
+                    {(activeCard.actionLabel || activeCard.actionHref || activeCard.onAction) && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleAction(activeCard, e)}
+                        className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 sm:px-4 sm:py-2 text-[11.5px] sm:text-[13px] font-bold backdrop-blur-md transition-all shadow-md hover:shadow-lg active:scale-95 shrink-0 cursor-pointer ${
+                          isDarkText
+                            ? "bg-[#4d243d] hover:bg-[#3d1a30] text-[#edd4b2]"
+                            : "bg-white/25 hover:bg-white/35 text-white"
+                        }`}
+                      >
+                        <span>{activeCard.actionLabel || "View"}</span>
+                        <ArrowUpRight className="size-3 sm:size-3.5 stroke-[2.5]" />
+                      </button>
                     )}
                   </div>
 
-                  {(activeCard.actionLabel || activeCard.actionHref || activeCard.onAction) && (
-                    <button
-                      type="button"
-                      onClick={(e) => handleAction(activeCard, e)}
-                      className="inline-flex items-center gap-1.5 rounded-full bg-white/25 hover:bg-white/35
-                                 px-3.5 py-1.5 sm:px-4 sm:py-2 text-[11.5px] sm:text-[13px] font-bold text-white backdrop-blur-md 
-                                 transition-all shadow-md hover:shadow-lg active:scale-95 shrink-0 cursor-pointer"
+                  {/* Optional Progress Bar (matching collection progress) */}
+                  {activeCard.progress && (
+                    <div
+                      className={`mt-3.5 sm:mt-5 pt-3 border-t ${
+                        isDarkText ? "border-[#4d243d]/15" : "border-white/15"
+                      }`}
                     >
-                      <span>{activeCard.actionLabel || "View"}</span>
-                      <ArrowUpRight className="size-3 sm:size-3.5 stroke-[2.5]" />
-                    </button>
+                      <div
+                        className={`flex items-center justify-between text-[11px] sm:text-xs font-medium mb-1.5 ${
+                          isDarkText ? "text-[#4d243d]/85" : "text-white/85"
+                        }`}
+                      >
+                        <span>{activeCard.progress.label || "Collection progress"}</span>
+                        <span className="font-semibold">{activeCard.progress.value}%</span>
+                      </div>
+                      <div
+                        className={`h-1.5 sm:h-2 w-full rounded-full overflow-hidden backdrop-blur-sm ${
+                          isDarkText ? "bg-[#4d243d]/15" : "bg-white/20"
+                        }`}
+                      >
+                        <motion.div
+                          className={`h-full rounded-full shadow-sm ${
+                            isDarkText ? "bg-[#4d243d]" : "bg-white"
+                          }`}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.min(100, Math.max(0, activeCard.progress.value))}%` }}
+                          transition={{ duration: 0.6, ease: "easeOut" }}
+                        />
+                      </div>
+                    </div>
                   )}
                 </div>
-
-                {/* Optional Progress Bar (matching collection progress) */}
-                {activeCard.progress && (
-                  <div className="mt-3.5 sm:mt-5 pt-3 border-t border-white/15">
-                    <div className="flex items-center justify-between text-[11px] sm:text-xs font-medium text-white/85 mb-1.5">
-                      <span>{activeCard.progress.label || "Collection progress"}</span>
-                      <span className="font-semibold">{activeCard.progress.value}%</span>
-                    </div>
-                    <div className="h-1.5 sm:h-2 w-full rounded-full bg-white/20 overflow-hidden backdrop-blur-sm">
-                      <motion.div
-                        className="h-full rounded-full bg-white shadow-sm"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${Math.min(100, Math.max(0, activeCard.progress.value))}%` }}
-                        transition={{ duration: 0.6, ease: "easeOut" }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
+              </motion.div>
+            );
+          })()}
         </AnimatePresence>
 
         {/* Secondary Cards Grid */}
@@ -198,6 +257,8 @@ export const MinimalCarousel: React.FC<MinimalCarouselProps> = ({
         >
           {(activeId ? secondaryCards : cards).map((card) => {
             const isThisCardActive = card.id === activeId;
+            const isDarkText = card.textColor === "dark";
+
             return (
               <motion.div
                 key={card.id}
@@ -208,45 +269,82 @@ export const MinimalCarousel: React.FC<MinimalCarouselProps> = ({
                 }}
                 transition={{ type: "spring", bounce: 0.18, duration: 0.55 }}
                 className={`group relative flex flex-col justify-between cursor-pointer
-                           rounded-[18px] sm:rounded-[24px] p-3 sm:p-4 text-white shadow-sm sm:shadow-lg
+                           rounded-[18px] sm:rounded-[24px] p-3 sm:p-4 shadow-sm sm:shadow-lg
                            hover:shadow-xl transition-shadow overflow-hidden
                            ${card.color}
+                           ${isDarkText ? "text-[#4d243d] border border-[#4d243d]/12" : "text-white"}
                            h-[110px] sm:h-32`}
               >
                 {/* Subtle sheen */}
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-white/10 opacity-60 group-hover:opacity-100 transition-opacity" />
+                <div
+                  className={`pointer-events-none absolute inset-0 transition-opacity ${
+                    isDarkText
+                      ? "bg-gradient-to-t from-black/5 via-transparent to-white/40 opacity-70 group-hover:opacity-100"
+                      : "bg-gradient-to-t from-black/20 via-transparent to-white/10 opacity-60 group-hover:opacity-100"
+                  }`}
+                />
 
                 <div className="relative z-10 flex justify-between items-start">
-                  <div className="flex size-7 sm:size-9 items-center justify-center rounded-lg sm:rounded-xl bg-white/15 backdrop-blur-sm">
-                    <card.icon className="size-4 sm:size-5 text-white" />
+                  <div
+                    className={`flex size-7 sm:size-9 items-center justify-center rounded-lg sm:rounded-xl backdrop-blur-sm ${
+                      isDarkText ? "bg-[#4d243d]/10 text-[#4d243d]" : "bg-white/15 text-white"
+                    }`}
+                  >
+                    <card.icon className="size-4 sm:size-5" />
                   </div>
                   {card.badge ? (
-                    <span className="rounded-full bg-white/20 px-2 py-0.5 text-[9px] sm:text-[10.5px] font-semibold text-white backdrop-blur-sm">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[9px] sm:text-[10.5px] font-semibold backdrop-blur-sm ${
+                        isDarkText ? "bg-[#4d243d]/12 text-[#4d243d]" : "bg-white/20 text-white"
+                      }`}
+                    >
                       {card.badge}
                     </span>
                   ) : (
-                    <div className="rounded-full bg-white/10 p-1 sm:p-1.5 text-white/80 group-hover:bg-white/20 transition-colors">
+                    <div
+                      className={`rounded-full p-1 sm:p-1.5 transition-colors ${
+                        isDarkText
+                          ? "bg-[#4d243d]/8 text-[#4d243d]/70 group-hover:bg-[#4d243d]/15"
+                          : "bg-white/10 text-white/80 group-hover:bg-white/20"
+                      }`}
+                    >
                       <MoreHorizontal className="size-3 sm:size-4" />
                     </div>
                   )}
                 </div>
 
                 <div className="relative z-10 mt-1 overflow-hidden">
-                  <h4 className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-white/70 truncate leading-tight">
+                  <h4
+                    className={`text-[10px] sm:text-xs font-semibold uppercase tracking-wider truncate leading-tight ${
+                      isDarkText ? "text-[#4d243d]/70" : "text-white/70"
+                    }`}
+                  >
                     {card.title}
                   </h4>
                   <div className="mt-0.5 flex items-baseline gap-1">
-                    <p className="text-[16px] sm:text-xl font-bold tracking-tight text-white truncate">
+                    <p
+                      className={`text-[16px] sm:text-xl font-bold tracking-tight truncate ${
+                        isDarkText ? "text-[#4d243d]" : "text-white"
+                      }`}
+                    >
                       {card.mainValue || card.value}
                     </p>
                     {card.unitSuffix && (
-                      <span className="text-[11px] sm:text-xs font-normal text-white/80 truncate">
+                      <span
+                        className={`text-[11px] sm:text-xs font-normal truncate ${
+                          isDarkText ? "text-[#4d243d]/80" : "text-white/80"
+                        }`}
+                      >
                         {card.unitSuffix}
                       </span>
                     )}
                   </div>
                   {card.substatus && (
-                    <p className="text-[9.5px] sm:text-[11px] font-medium text-white/80 truncate mt-0.5">
+                    <p
+                      className={`text-[9.5px] sm:text-[11px] font-medium truncate mt-0.5 ${
+                        isDarkText ? "text-[#4d243d]/80" : "text-white/80"
+                      }`}
+                    >
                       {card.substatus}
                     </p>
                   )}
