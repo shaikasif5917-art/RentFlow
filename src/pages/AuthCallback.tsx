@@ -3,6 +3,43 @@ import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
+function extractAuthParams(): {
+  code: string | null;
+  error: string | null;
+  errorDescription: string | null;
+} {
+  // 1. Check window.location.search (standard query params)
+  const searchParams = new URLSearchParams(window.location.search);
+  let code = searchParams.get("code");
+  let error = searchParams.get("error");
+  let errorDescription = searchParams.get("error_description");
+
+  // 2. Check window.location.hash (HashRouter query or fragment params)
+  const hash = window.location.hash;
+  if (!code || !error || !errorDescription) {
+    const qIndex = hash.indexOf("?");
+    if (qIndex !== -1) {
+      const hashParams = new URLSearchParams(hash.slice(qIndex + 1));
+      if (!code) code = hashParams.get("code");
+      if (!error) error = hashParams.get("error");
+      if (!errorDescription) errorDescription = hashParams.get("error_description");
+    }
+  }
+
+  // 3. Check for secondary hash fragment params e.g. #error_description=...
+  if (!code || !error || !errorDescription) {
+    const secondHash = hash.indexOf("#", 1);
+    if (secondHash !== -1) {
+      const fragParams = new URLSearchParams(hash.slice(secondHash + 1));
+      if (!code) code = fragParams.get("code");
+      if (!error) error = fragParams.get("error");
+      if (!errorDescription) errorDescription = fragParams.get("error_description");
+    }
+  }
+
+  return { code, error, errorDescription };
+}
+
 export default function AuthCallback() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
@@ -11,44 +48,71 @@ export default function AuthCallback() {
     let mounted = true;
 
     const processCallback = async () => {
-      // Extract search params (Supabase puts PKCE code or errors in the search string, not hash)
-      const searchParams = new URLSearchParams(window.location.search);
-      const errorDesc = searchParams.get("error_description");
-      const code = searchParams.get("code");
+      const { code, error: errParam, errorDescription } = extractAuthParams();
 
-      // Clean the URL to prevent re-processing
-      if (window.location.search) {
-        window.history.replaceState(null, "", window.location.pathname + window.location.hash);
+      // Clean query parameters from URL to prevent duplicate processing on refresh
+      if (window.location.search || window.location.hash.includes("?")) {
+        window.history.replaceState(null, "", window.location.pathname + "#/auth/callback");
       }
 
-      if (errorDesc) {
-        if (mounted) setError(errorDesc.replace(/\+/g, " "));
-        // Wait a moment then go to login with error
+      // Check if user is already authenticated
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session) {
+        if (mounted) navigate("/dashboard", { replace: true });
+        return;
+      }
+
+      // Handle confirmation or callback error from Supabase
+      if (errorDescription || errParam) {
+        const errorMsg = (errorDescription || errParam || "Email verification failed").replace(/\+/g, " ");
+        if (mounted) setError(errorMsg);
         setTimeout(() => {
-          if (mounted) navigate("/login?error_description=" + encodeURIComponent(errorDesc), { replace: true });
+          if (mounted) {
+            navigate(`/login?error_description=${encodeURIComponent(errorMsg)}`, { replace: true });
+          }
         }, 2000);
         return;
       }
 
-      if (code || !searchParams.has("error")) {
-        // Wait briefly for Supabase's internal auto-exchange to complete
-        setTimeout(async () => {
-          if (!mounted) return;
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
-            // PKCE succeeded on the same device
-            navigate("/dashboard", { replace: true });
-          } else {
-            // PKCE likely failed (e.g. opened on phone instead of desktop).
-            // However, the token was valid enough to reach here without an error in the URL,
-            // which means the Supabase server verified the email successfully!
-            // We just need them to sign in manually.
-            navigate("/login?verified=true", { replace: true });
+      // Handle PKCE code exchange
+      if (code) {
+        try {
+          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+
+          if (exchangeError) {
+            // Check if Supabase auto-exchange already created the session
+            const { data: retrySession } = await supabase.auth.getSession();
+            if (retrySession.session) {
+              if (mounted) navigate("/dashboard", { replace: true });
+              return;
+            }
+
+            // Cross-device or code verifier mismatch:
+            // The email was confirmed on Supabase, but session could not be established locally.
+            // Direct user to log in with confirmed status.
+            console.warn("PKCE code exchange notice:", exchangeError.message);
+            if (mounted) navigate("/login?verified=true", { replace: true });
+            return;
           }
-        }, 1500);
+
+          if (data?.session) {
+            if (mounted) navigate("/dashboard", { replace: true });
+          } else {
+            if (mounted) navigate("/login?verified=true", { replace: true });
+          }
+        } catch (err: any) {
+          console.error("Auth callback exchange error:", err);
+          if (mounted) navigate("/login?verified=true", { replace: true });
+        }
+        return;
+      }
+
+      // Fallback: If no code or error is in the URL, verify if session exists or redirect to login
+      const { data: finalCheck } = await supabase.auth.getSession();
+      if (finalCheck.session) {
+        if (mounted) navigate("/dashboard", { replace: true });
       } else {
-        // Fallback for unknown states
-        navigate("/login", { replace: true });
+        if (mounted) navigate("/login", { replace: true });
       }
     };
 
@@ -65,7 +129,7 @@ export default function AuthCallback() {
         {error ? (
           <>
             <div className="mb-4 rounded-full bg-red-100 p-3">
-              <div className="size-6 text-red-600">!</div>
+              <div className="size-6 text-red-600 font-bold">!</div>
             </div>
             <h2 className="text-lg font-semibold text-[var(--color-ink)]">Verification Failed</h2>
             <p className="mt-2 text-[14px] text-[var(--color-ink-soft)]">{error}</p>

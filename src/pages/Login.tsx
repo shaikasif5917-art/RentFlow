@@ -6,6 +6,7 @@ import { Button } from "../components/ui/Button";
 import { OtpInput } from "../components/auth/OtpInput";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
+import { getAuthRedirectUrl } from "../utils/authUrls";
 
 type AuthMode = "signin" | "signup" | "forgot" | "verify";
 
@@ -44,17 +45,28 @@ export default function Login() {
   }, [cooldown]);
 
   useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const errorDesc = searchParams.get("error_description");
-    const verified = searchParams.get("verified");
+    // Check both search and hash query strings for verification or error parameters
+    const getParam = (name: string): string | null => {
+      const searchVal = new URLSearchParams(window.location.search).get(name);
+      if (searchVal) return searchVal;
+      const hash = window.location.hash;
+      const qIndex = hash.indexOf("?");
+      if (qIndex !== -1) {
+        return new URLSearchParams(hash.slice(qIndex + 1)).get(name);
+      }
+      return null;
+    };
+
+    const errorDesc = getParam("error_description");
+    const verified = getParam("verified");
     
     if (errorDesc) {
       setError(errorDesc.replace(/\+/g, " "));
-      window.history.replaceState(null, "", window.location.pathname + window.location.hash);
+      window.history.replaceState(null, "", window.location.pathname + "#/login");
     } else if (verified) {
       setMessage("Email verified successfully! You can now sign in.");
       setMode("signin");
-      window.history.replaceState(null, "", window.location.pathname + window.location.hash);
+      window.history.replaceState(null, "", window.location.pathname + "#/login");
     }
   }, []);
 
@@ -117,9 +129,13 @@ export default function Login() {
     setMessage(null);
 
     try {
+      const callbackUrl = getAuthRedirectUrl("/auth/callback");
       const { error: resendError } = await supabase.auth.resend({
         type: "signup",
         email: email.trim(),
+        options: {
+          emailRedirectTo: callbackUrl,
+        },
       });
       if (resendError) throw resendError;
       setMessage("A fresh 6-digit verification code has been sent to your email.");
@@ -146,10 +162,12 @@ export default function Login() {
       if (mode === "verify") {
         await verifyOtpCode(otp);
       } else if (mode === "signup") {
+        const callbackUrl = getAuthRedirectUrl("/auth/callback");
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: email.trim(),
           password,
           options: {
+            emailRedirectTo: callbackUrl,
             data: {
               full_name: fullName.trim(),
             },
@@ -176,15 +194,25 @@ export default function Login() {
             setMode("verify");
             setOtp("");
             setMessage("Your email has not been verified yet. Enter the 6-digit code below.");
-            supabase.auth.resend({ type: "signup", email: email.trim() }).catch(() => {});
+            const callbackUrl = getAuthRedirectUrl("/auth/callback");
+            supabase.auth
+              .resend({
+                type: "signup",
+                email: email.trim(),
+                options: {
+                  emailRedirectTo: callbackUrl,
+                },
+              })
+              .catch(() => {});
             setCooldown(60);
             return;
           }
           throw signInError;
         }
       } else if (mode === "forgot") {
+        const resetPasswordUrl = getAuthRedirectUrl("/reset-password");
         const { error: forgotError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-          redirectTo: `${window.location.origin}/#/reset-password`,
+          redirectTo: resetPasswordUrl,
         });
         if (forgotError) throw forgotError;
         setMessage("Password reset instructions sent. Please check your email.");
