@@ -47,7 +47,7 @@ export default function Dashboard() {
         value: collectedPct,
         label: "Collection progress",
       },
-      color: "bg-[#432818]", // Deep Roasted Espresso (High-contrast luxury anchor)
+      color: "bg-[#344229]", // Deep Forest Sage (High-contrast anchor of the palette)
       textColor: "light",
       icon: Wallet,
       badge: "On track",
@@ -61,8 +61,8 @@ export default function Dashboard() {
       mainValue: `${portfolioStats.properties}`,
       unitSuffix: "active",
       subtitle: `${totals.properties} managed properties in your portfolio`,
-      color: "bg-[#d0a98f]", // Dusty Warm Rose / Terracotta Sand
-      textColor: "dark",
+      color: "bg-[#718355]", // Deep Reseda Sage (from palette)
+      textColor: "light",
       icon: Building2,
       actionLabel: "View Properties",
       actionHref: "#/properties",
@@ -74,8 +74,8 @@ export default function Dashboard() {
       mainValue: `${portfolioStats.units}`,
       unitSuffix: "units",
       subtitle: `${totals.occupied} occupied · ${totals.vacant} vacant · ${totals.maintenance} maintenance`,
-      color: "bg-[#cac2b5]", // Warm French Greige / Stone
-      textColor: "dark",
+      color: "bg-[#87986a]", // Earthy Fern Green (from palette)
+      textColor: "light",
       icon: Layers,
       actionLabel: "Manage Units",
       actionHref: "#/properties",
@@ -87,7 +87,7 @@ export default function Dashboard() {
       mainValue: `${portfolioStats.occupancy}`,
       unitSuffix: "%",
       subtitle: totals.occupancy >= 80 ? "Healthy portfolio occupancy (≥80%)" : "Target occupancy: 90%+",
-      color: "bg-[#ecdcc9]", // Soft Oat Cream / Champagne Sand
+      color: "bg-[#b5c99a]", // Sage Leaf Green (from palette)
       textColor: "dark",
       icon: PieChart,
       actionLabel: "View Tenants",
@@ -101,7 +101,7 @@ export default function Dashboard() {
       unitSuffix: "vacant",
       substatus: portfolioStats.vacant > 0 ? "Needs attention" : "All units leased",
       subtitle: portfolioStats.vacant > 0 ? "Requires attention · Unit turnaround needed" : "All units currently leased",
-      color: "bg-[#edd4b2]", // Warm Almond Buff
+      color: "bg-[#cfe1b9]", // Soft Matcha Dew (from palette)
       textColor: "dark",
       icon: DoorOpen,
       actionLabel: "View Vacancies",
