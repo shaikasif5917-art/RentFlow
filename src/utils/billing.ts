@@ -3,6 +3,17 @@ import type { PaymentState } from "../data/types";
 export type RentCollectionMethod = "prepaid" | "postpaid";
 
 /**
+ * Returns a date string in "YYYY-MM-DD" local calendar date format,
+ * preventing UTC midnight timezone shifts.
+ */
+export function formatLocalDate(d: Date = new Date()): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * Returns the current calendar billing month in "YYYY-MM-01" format
  * using local system time (safe from UTC midnight timezone shifts).
  */

@@ -125,7 +125,12 @@ export interface PropertyMetrics {
   state: PropertyState;
 }
 
-export function propertyMetrics(units: Unit[], tenants: Tenant[]): PropertyMetrics {
+export function propertyMetrics(
+  units: Unit[],
+  tenants: Tenant[],
+  payments?: Payment[],
+  billingMonth?: string,
+): PropertyMetrics {
   const byId = new Map(tenants.map((t) => [t.id, t]));
   let expected = 0;
   let collected = 0;
@@ -142,14 +147,30 @@ export function propertyMetrics(units: Unit[], tenants: Tenant[]): PropertyMetri
       const t = u.tenantId ? byId.get(u.tenantId) : undefined;
       // Active contracted tenant takes absolute precedence for rent accounting
       if (t && t.status === "active") {
-        const actualRent = t.rent;
-        expected += actualRent;
-        if (t.state === "paid") {
-          collected += actualRent;
+        if (payments && billingMonth) {
+          const p = payments.find(
+            (pay) => pay.tenantId === t.id && pay.billingMonth === billingMonth
+          );
+          const actualRent = p?.amount ?? t.rent;
+          expected += actualRent;
+          if (p?.state === "paid") {
+            collected += actualRent;
+          } else {
+            outstanding += actualRent;
+            if (p?.state === "overdue") {
+              overdueCount++;
+            }
+          }
         } else {
-          outstanding += actualRent;
-          if (t.state === "overdue") {
-            overdueCount++;
+          const actualRent = t.rent;
+          expected += actualRent;
+          if (t.state === "paid") {
+            collected += actualRent;
+          } else {
+            outstanding += actualRent;
+            if (t.state === "overdue") {
+              overdueCount++;
+            }
           }
         }
       } else {
@@ -173,8 +194,14 @@ export function propertyMetrics(units: Unit[], tenants: Tenant[]): PropertyMetri
   return { total, occupied, vacant, maintenance, expected, collected, outstanding, overdueCount, potential, occupancy, state };
 }
 
-export function portfolioTotals(properties: Property[], units: Unit[], tenants: Tenant[]) {
-  const m = propertyMetrics(units, tenants);
+export function portfolioTotals(
+  properties: Property[],
+  units: Unit[],
+  tenants: Tenant[],
+  payments?: Payment[],
+  billingMonth?: string,
+) {
+  const m = propertyMetrics(units, tenants, payments, billingMonth);
   return { ...m, properties: properties.length, units: m.total };
 }
 

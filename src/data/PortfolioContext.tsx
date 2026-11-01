@@ -21,6 +21,7 @@ import {
   isPaymentOverdue,
   calculatePaymentState,
   isTenantLiableForBillingMonth,
+  formatLocalDate,
   type RentCollectionMethod,
 } from "../utils/billing";
 
@@ -53,7 +54,7 @@ interface PortfolioContextValue {
   addUnit: (propertyId: string, input: { number: string; config: string; rent: number }) => Promise<void>;
   assignTenant: (unitId: string, input: { name: string; phone: string; rent: number }) => void;
   recordRent: (unitId: string, method: PaymentMethod) => Promise<void>;
-  resolveMaintenance: (unitId: string) => void;
+  resolveMaintenance: (unitId: string) => Promise<void>;
   addExpense: (propertyId: string, input: { category: string; amount: number; note: string }) => Promise<void>;
   updateRentStatus: (tenantId: string, isPaid: boolean, billingMonth?: string, method?: PaymentMethod) => Promise<void>;
   vacateTenant: (tenantId: string, vacatingDate: string) => Promise<void>;
@@ -470,10 +471,21 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
 
   const deleteProperty = useCallback<PortfolioContextValue["deleteProperty"]>(async (propertyId) => {
     if (!user) return;
-    const { error } = await supabase.rpc('delete_property_safely', {
-      target_property_id: propertyId
-    });
-    if (error) throw error;
+    try {
+      const { error: rpcError } = await supabase.rpc('delete_property_safely', {
+        target_property_id: propertyId
+      });
+      if (rpcError) throw rpcError;
+    } catch {
+      // Fallback: Delete related child entities in reverse foreign key order
+      await supabase.from("payments").delete().eq("property_id", propertyId).eq("owner_id", user.id);
+      await supabase.from("expenses").delete().eq("property_id", propertyId).eq("owner_id", user.id);
+      await supabase.from("activities").delete().eq("property_id", propertyId).eq("owner_id", user.id);
+      await supabase.from("tenants").delete().eq("property_id", propertyId).eq("owner_id", user.id);
+      await supabase.from("units").delete().eq("property_id", propertyId).eq("owner_id", user.id);
+      const { error: propError } = await supabase.from("properties").delete().eq("id", propertyId).eq("owner_id", user.id);
+      if (propError) throw propError;
+    }
     await fetchPortfolio();
   }, [user, fetchPortfolio]);
 
@@ -573,7 +585,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
         const grace = profile?.grace_period_days || 0;
         const isOverdue = isPaymentOverdue(billingMonth, collectionMethod, dueDay, grace, today);
 
-        const { error: paymentError } = await supabase.from("payments").insert({
+        const { error: paymentError } = await supabase.from("payments").upsert({
           owner_id: user.id,
           property_id: property.id,
           unit_id: unitId,
@@ -583,7 +595,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
           billing_month: billingMonth,
           method: null,
           state: isOverdue ? "overdue" : "due"
-        });
+        }, { onConflict: "tenant_id, billing_month" });
         
         if (paymentError) {
           console.error("Assign tenant payment error:", {
@@ -618,13 +630,18 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       const billingMonth = getActiveCollectionMonth(collectionMethod, today);
 
       try {
+        const existingPayment = payments.find(
+          (p) => p.tenantId === tenant.id && p.billingMonth === billingMonth
+        );
+        const rentAmount = existingPayment?.amount || tenant.rent;
+
         const { error: paymentError } = await supabase.from("payments").upsert({
           owner_id: user.id,
           property_id: tenant.propertyId,
           unit_id: unitId,
           tenant_id: tenant.id,
-          amount: tenant.rent,
-          payment_date: today.toISOString().split('T')[0],
+          amount: rentAmount,
+          payment_date: formatLocalDate(today),
           billing_month: billingMonth,
           method,
           state: "paid",
@@ -634,13 +651,13 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
         if (paymentError) throw paymentError;
 
         await fetchPortfolio();
-        log(unit.propertyId, "payment", `${currency(tenant.rent)} rent received`, `Unit ${unit.number} · ${tenant.name}`);
+        log(unit.propertyId, "payment", `${currency(rentAmount)} rent received`, `Unit ${unit.number} · ${tenant.name}`);
       } catch (err) {
         console.error("Error recording rent:", err);
         throw err;
       }
     },
-    [user, units, tenants, profile, fetchPortfolio, log],
+    [user, units, tenants, payments, profile, fetchPortfolio, log],
   );
 
   const updateRentStatus = useCallback<PortfolioContextValue["updateRentStatus"]>(
@@ -673,7 +690,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
 
         if (isPaid) {
           payload.state = "paid";
-          payload.payment_date = today.toISOString().split("T")[0];
+          payload.payment_date = formatLocalDate(today);
           payload.method = customMethod || existingPayment?.method || "UPI";
           payload.recorded_at = (existingPayment?.state === "paid" && existingPayment.recordedAt) 
             ? existingPayment.recordedAt 
@@ -741,17 +758,27 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
   );
 
   const resolveMaintenance = useCallback<PortfolioContextValue["resolveMaintenance"]>(
-    (unitId) => {
+    async (unitId) => {
+      if (!user) return;
       const unit = units.find((u) => u.id === unitId);
       if (!unit) return;
-      setUnits((prev) =>
-        prev.map((u) =>
-          u.id === unitId ? { ...u, status: "vacant", vacantDays: 0, maintenanceNote: undefined } : u,
-        ),
-      );
-      log(unit.propertyId, "maintenance", "Maintenance resolved", `Unit ${unit.number} is ready to let`);
+
+      try {
+        const { error } = await supabase
+          .from("units")
+          .update({ status: "vacant", vacant_days: 0, maintenance_note: null })
+          .eq("id", unitId)
+          .eq("owner_id", user.id);
+
+        if (error) throw error;
+
+        await fetchPortfolio();
+        log(unit.propertyId, "maintenance", "Maintenance resolved", `Unit ${unit.number} is ready to let`);
+      } catch (err) {
+        console.error("Error resolving maintenance:", err);
+      }
     },
-    [units, log],
+    [user, units, fetchPortfolio, log],
   );
 
   const addExpense = useCallback<PortfolioContextValue["addExpense"]>(
@@ -764,7 +791,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
           property_id: propertyId,
           amount: input.amount,
           category: input.category,
-          expense_date: today.toISOString().split('T')[0],
+          expense_date: formatLocalDate(today),
           note: input.note || null
         });
 

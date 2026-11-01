@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { ArrowUpRight, Plus, TrendingUp, Wallet, Building2, Layers, PieChart, DoorOpen } from "lucide-react";
 import { PageHeader } from "../components/ui/PageHeader";
 import { SectionHeader } from "../components/ui/SectionHeader";
@@ -13,17 +14,47 @@ import { portfolioTotals, unitLabel } from "../data/selectors";
 import { currency, paymentLabel, paymentTone } from "../utils/format";
 import { useAuth } from "../contexts/AuthContext";
 import { useLocalTime } from "../hooks/useLocalTime";
+import { getActiveCollectionMonth, type RentCollectionMethod } from "../utils/billing";
 
 const stateOrder = { overdue: 0, due: 1, paid: 2 } as const;
 
 export default function Dashboard() {
   const { profile } = useAuth();
   const userName = profile?.full_name || "Portfolio Owner";
-  const { properties, units, tenants: allTenants, activity: allActivity } = usePortfolio();
+  const { properties, units, tenants: allTenants, payments, activity: allActivity } = usePortfolio();
   const totals = portfolioTotals(properties, units, allTenants);
+
+  const collectionMethod = (profile?.rent_collection_method as RentCollectionMethod) || "prepaid";
+  const activeCycleMonth = useMemo(() => getActiveCollectionMonth(collectionMethod, new Date()), [collectionMethod]);
+  const cyclePayments = useMemo(
+    () => payments.filter((p) => p.billingMonth === activeCycleMonth),
+    [payments, activeCycleMonth]
+  );
+
+  const cycleCollected = useMemo(() => {
+    if (cyclePayments.length > 0) {
+      return cyclePayments.filter((p) => p.state === "paid").reduce((sum, p) => sum + p.amount, 0);
+    }
+    return totals.collected;
+  }, [cyclePayments, totals.collected]);
+
+  const cycleOutstanding = useMemo(() => {
+    if (cyclePayments.length > 0) {
+      return cyclePayments.filter((p) => p.state !== "paid").reduce((sum, p) => sum + p.amount, 0);
+    }
+    return totals.outstanding;
+  }, [cyclePayments, totals.outstanding]);
+
+  const cycleExpected = useMemo(() => {
+    if (cyclePayments.length > 0) {
+      return cycleCollected + cycleOutstanding;
+    }
+    return totals.expected;
+  }, [cyclePayments, cycleCollected, cycleOutstanding, totals.expected]);
+
   const portfolioStats = {
-    collected: totals.collected,
-    monthlyIncome: totals.expected,
+    collected: cycleCollected,
+    monthlyIncome: cycleExpected,
     properties: totals.properties,
     units: totals.units,
     occupancy: Math.round(totals.occupancy),

@@ -76,11 +76,11 @@ export default function RentHistory() {
       const fullLabel = d.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
       const isCurrent = offset === 0;
 
-      // Filter real payment records for this month
+      // Filter real payment records for this month using authoritative billingMonth
+      // Only fallback to date if billingMonth is absent, preventing double-counting
       const monthPayments = payments.filter((p) => {
-        if (p.billingMonth && p.billingMonth.startsWith(monthPrefix)) return true;
-        if (p.date && p.date.startsWith(monthPrefix)) return true;
-        return false;
+        if (p.billingMonth) return p.billingMonth.startsWith(monthPrefix);
+        return p.date ? p.date.startsWith(monthPrefix) : false;
       });
 
       let paid = 0;
@@ -90,30 +90,7 @@ export default function RentHistory() {
       const methodCounts = { upi: 0, bank: 0, cash: 0, cheque: 0 };
       const methodAmounts = { upi: 0, bank: 0, cash: 0, cheque: 0 };
 
-      if (isCurrent) {
-        paid = totals.collected;
-        overdue = totals.outstanding;
-        due = Math.max(0, totals.expected - totals.collected - totals.outstanding);
-        expected = totals.expected > 0 ? totals.expected : paid + due + overdue || baselineRent;
-
-        // Tally current month actual payment methods
-        monthPayments.forEach((p) => {
-          const m = p.method?.toLowerCase() || "upi";
-          if (m.includes("upi")) {
-            methodCounts.upi++;
-            if (p.state === "paid") methodAmounts.upi += p.amount;
-          } else if (m.includes("bank") || m.includes("transfer")) {
-            methodCounts.bank++;
-            if (p.state === "paid") methodAmounts.bank += p.amount;
-          } else if (m.includes("cash")) {
-            methodCounts.cash++;
-            if (p.state === "paid") methodAmounts.cash += p.amount;
-          } else {
-            methodCounts.cheque++;
-            if (p.state === "paid") methodAmounts.cheque += p.amount;
-          }
-        });
-      } else if (monthPayments.length > 0) {
+      if (monthPayments.length > 0) {
         monthPayments.forEach((p) => {
           if (p.state === "paid") paid += p.amount;
           else if (p.state === "due") due += p.amount;
@@ -134,7 +111,14 @@ export default function RentHistory() {
             if (p.state === "paid") methodAmounts.cheque += p.amount;
           }
         });
-        expected = Math.max(paid + due + overdue, baselineRent);
+        expected = paid + due + overdue;
+      } else if (isCurrent) {
+        paid = totals.collected;
+        overdue = totals.outstanding;
+        due = Math.max(0, totals.expected - totals.collected - totals.outstanding);
+        expected = totals.expected > 0 ? totals.expected : baselineRent;
+        methodAmounts.upi = paid;
+        methodCounts.upi = paid > 0 ? 1 : 0;
       } else {
         // Fallback realistic historical numbers for months before onboarding
         const factor = fallbackFactors[i];

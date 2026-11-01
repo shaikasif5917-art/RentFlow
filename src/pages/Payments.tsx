@@ -12,21 +12,26 @@ import { Segmented } from "../components/ui/Segmented";
 import { usePortfolio } from "../data/PortfolioContext";
 import { portfolioTotals, plural } from "../data/selectors";
 import { currency, paymentLabel, paymentTone } from "../utils/format";
+import { getActiveCollectionMonth, type RentCollectionMethod } from "../utils/billing";
 import type { PaymentState } from "../data/types";
 
 export default function Payments() {
-  const { payments, properties, units, tenants, isLoading } = usePortfolio();
+  const { payments, properties, units, tenants, profile, isLoading } = usePortfolio();
+
+  const collectionMethod = (profile?.rent_collection_method as RentCollectionMethod) || "prepaid";
+  const activeCycleMonth = useMemo(() => getActiveCollectionMonth(collectionMethod, new Date()), [collectionMethod]);
   
   const [query, setQuery] = useState("");
   const [filterState, setFilterState] = useState<PaymentState | "all">("all");
-  const [monthFilter, setMonthFilter] = useState("all");
+  const [monthFilter, setMonthFilter] = useState(activeCycleMonth);
 
   const totals = portfolioTotals(properties, units, tenants);
   
   const months = useMemo(() => {
     const m = new Set(payments.map(p => p.billingMonth));
-    return Array.from(m).sort().reverse();
-  }, [payments]);
+    m.add(activeCycleMonth);
+    return Array.from(m).filter(Boolean).sort().reverse();
+  }, [payments, activeCycleMonth]);
 
   // Dynamically compute summary figures directly from the actual Supabase payment records
   const summaryTotals = useMemo(() => {
@@ -141,10 +146,13 @@ export default function Payments() {
                 value={monthFilter}
                 onChange={(e) => setMonthFilter(e.target.value)}
               >
-                <option value="all">All</option>
                 {months.map((m) => (
-                  <option key={m} value={m}>{new Date(m).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })}</option>
+                  <option key={m} value={m}>
+                    {new Date(m).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })}
+                    {m === activeCycleMonth ? ' • Current' : ''}
+                  </option>
                 ))}
+                <option value="all">All History</option>
               </select>
             </div>
           </div>
@@ -168,10 +176,13 @@ export default function Payments() {
               value={monthFilter}
               onChange={(e) => setMonthFilter(e.target.value)}
             >
-              <option value="all">All months</option>
               {months.map((m) => (
-                <option key={m} value={m}>{new Date(m).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</option>
+                <option key={m} value={m}>
+                  {new Date(m).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
+                  {m === activeCycleMonth ? ' • Current Cycle' : ''}
+                </option>
               ))}
+              <option value="all">All Months / All History</option>
             </select>
           </div>
         </div>

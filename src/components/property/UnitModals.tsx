@@ -5,7 +5,12 @@ import type { PaymentMethod, Tenant, Unit } from "../../data/types";
 import { usePortfolio } from "../../data/PortfolioContext";
 import { currency } from "../../utils/format";
 import { cn } from "../../utils/cn";
-import { getActiveCollectionMonth, parseBillingMonth, type RentCollectionMethod } from "../../utils/billing";
+import {
+  getActiveCollectionMonth,
+  parseBillingMonth,
+  formatLocalDate,
+  type RentCollectionMethod,
+} from "../../utils/billing";
 import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
@@ -502,13 +507,13 @@ export function UpdateRentModal({
 
 export function VacateTenantModal({ open, onClose, tenant }: { open: boolean; onClose: () => void; tenant: Tenant | null }) {
   const { vacateTenant } = usePortfolio();
-  const [vacatingDate, setVacatingDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [vacatingDate, setVacatingDate] = useState<string>(formatLocalDate(new Date()));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (open) {
-      setVacatingDate(new Date().toISOString().split('T')[0]);
+      setVacatingDate(formatLocalDate(new Date()));
       setError("");
     }
   }, [open]);
