@@ -65,8 +65,8 @@ export const MinimalCarousel: React.FC<MinimalCarouselProps> = ({
   };
 
   return (
-    <div className={`w-full font-sans select-none ${className}`}>
-      <motion.div layout className="flex flex-col gap-2.5 sm:gap-3">
+    <div className={`w-full min-w-0 font-sans select-none ${className}`}>
+      <motion.div layout className="flex flex-col gap-2.5 sm:gap-3 w-full min-w-0">
         {/* Expanded Hero Card */}
         <AnimatePresence mode="popLayout">
           {activeCard && (() => {
@@ -75,7 +75,7 @@ export const MinimalCarousel: React.FC<MinimalCarouselProps> = ({
               <motion.div
                 key={activeCard.id}
                 layoutId={activeCard.id}
-                className={`relative flex w-full flex-col justify-between overflow-hidden
+                className={`relative flex w-full min-w-0 flex-col justify-between overflow-hidden
                            rounded-[24px] sm:rounded-[32px] p-4.5 sm:p-7 shadow-lg sm:shadow-2xl
                            ${activeCard.color}
                            ${isDarkText ? "text-[#2b3428] border border-[#2b3428]/12" : "text-white"}
@@ -251,7 +251,7 @@ export const MinimalCarousel: React.FC<MinimalCarouselProps> = ({
         {/* Secondary Cards Grid */}
         <motion.div
           layout
-          className={`grid gap-2 sm:gap-3.5 transition-all duration-500 ${
+          className={`grid gap-2 sm:gap-3.5 w-full min-w-0 transition-all duration-500 ${
             activeId ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-4"
           }`}
         >
@@ -268,7 +268,7 @@ export const MinimalCarousel: React.FC<MinimalCarouselProps> = ({
                   setActiveId(isThisCardActive ? null : card.id);
                 }}
                 transition={{ type: "spring", bounce: 0.18, duration: 0.55 }}
-                className={`group relative flex flex-col justify-between cursor-pointer
+                className={`group relative flex flex-col justify-between cursor-pointer min-w-0
                            rounded-[18px] sm:rounded-[24px] p-3 sm:p-4 shadow-sm sm:shadow-lg
                            hover:shadow-xl transition-shadow overflow-hidden
                            ${card.color}

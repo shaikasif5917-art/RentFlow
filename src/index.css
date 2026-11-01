@@ -42,8 +42,20 @@
 html,
 body,
 #root {
-  height: 100%;
-  overflow-x: hidden;
+  min-height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+@media (min-width: 1024px) {
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
 }
 
 body {
@@ -53,6 +65,8 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   font-feature-settings: "cv11", "ss01";
+  -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
 }
 
 /* Numeric / statistical typography */
@@ -61,21 +75,23 @@ body {
   letter-spacing: -0.01em;
 }
 
-/* Custom scrollbar — quiet */
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #d8c4a8;
-  border-radius: 999px;
-  border: 3px solid var(--color-canvas);
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #c7b293;
+/* Custom scrollbar — quiet (applied to desktop viewports to avoid mobile scrollbar strips) */
+@media (min-width: 1024px) {
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #d8c4a8;
+    border-radius: 999px;
+    border: 3px solid var(--color-canvas);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #c7b293;
+  }
 }
 
 @keyframes fade-rise {

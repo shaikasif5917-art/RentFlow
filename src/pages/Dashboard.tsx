@@ -110,7 +110,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="space-y-4 sm:space-y-8 pb-16 sm:pb-0">
+    <div className="space-y-4 sm:space-y-8 pb-16 sm:pb-0 w-full min-w-0">
       <PageHeader
         eyebrow="Portfolio overview"
         title={`${greeting}, ${userName}`}
@@ -131,8 +131,8 @@ export default function Dashboard() {
       <MinimalCarousel cards={portfolioCards} defaultActiveId="collected" />
 
       {/* Two-column secondary — recent tenants + activity */}
-      <div className="grid gap-4 sm:gap-5 lg:grid-cols-2">
-        <Surface elevated>
+      <div className="grid gap-4 sm:gap-5 lg:grid-cols-2 w-full min-w-0">
+        <Surface elevated className="min-w-0 overflow-hidden">
           <div className="px-4 pt-4 sm:px-5 sm:pt-5">
             <SectionHeader
               title="Rent status"
@@ -148,8 +148,8 @@ export default function Dashboard() {
             {tenants.slice(0, 4).map((t, i) => (
               <div key={t.id}>
                 {i > 0 && <Divider className="mx-4 sm:mx-5" />}
-                <div className="flex items-center gap-3 px-4 py-3 sm:gap-3.5 sm:px-5 sm:py-3.5">
-                  <Avatar name={t.name} size="md" />
+                <div className="flex items-center gap-3 px-4 py-3 sm:gap-3.5 sm:px-5 sm:py-3.5 min-w-0">
+                  <Avatar name={t.name} size="md" className="shrink-0" />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[14px] font-medium text-[var(--color-ink)]">
                       {t.name}
@@ -164,10 +164,10 @@ export default function Dashboard() {
                       · {unitLabel(t.unit)}
                     </div>
                   </div>
-                  <div className="tabular hidden text-right text-[13px] font-medium text-[var(--color-ink-soft)] sm:block">
+                  <div className="tabular hidden text-right text-[13px] font-medium text-[var(--color-ink-soft)] sm:block shrink-0">
                     {currency(t.rent)}
                   </div>
-                  <StatusBadge tone={paymentTone(t.state)} dot>
+                  <StatusBadge tone={paymentTone(t.state)} dot className="shrink-0">
                     {paymentLabel(t.state)}
                   </StatusBadge>
                 </div>
@@ -176,18 +176,18 @@ export default function Dashboard() {
           </div>
         </Surface>
 
-        <Surface elevated>
+        <Surface elevated className="min-w-0 overflow-hidden">
           <div className="px-4 pt-4 sm:px-5 sm:pt-5">
             <SectionHeader title="Recent activity" />
           </div>
           <div className="mt-3 px-4 pb-4 sm:mt-4 sm:px-5 sm:pb-5">
             <ol className="relative space-y-4 sm:space-y-5 before:absolute before:left-[5px] before:top-1.5 before:h-[calc(100%-1rem)] before:w-px before:bg-[var(--color-line)]">
               {activity.map((a) => (
-                <li key={a.id} className="relative flex gap-4 pl-6">
-                  <span className="absolute left-0 top-1.5 size-[11px] rounded-full border-2 border-[var(--color-surface)] bg-[var(--color-accent-soft)] ring-1 ring-[var(--color-line)]" />
-                  <div className="flex-1">
-                    <div className="text-[13.5px] font-medium text-[var(--color-ink)]">{a.title}</div>
-                    <div className="text-[12.5px] text-[var(--color-ink-soft)]">{a.detail}</div>
+                <li key={a.id} className="relative flex gap-4 pl-6 min-w-0">
+                  <span className="absolute left-0 top-1.5 size-[11px] rounded-full border-2 border-[var(--color-surface)] bg-[var(--color-accent-soft)] ring-1 ring-[var(--color-line)] shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13.5px] font-medium text-[var(--color-ink)] break-words">{a.title}</div>
+                    <div className="text-[12.5px] text-[var(--color-ink-soft)] break-words">{a.detail}</div>
                   </div>
                   <span className="tabular shrink-0 text-[11.5px] text-[var(--color-ink-faint)]">
                     {a.time}
