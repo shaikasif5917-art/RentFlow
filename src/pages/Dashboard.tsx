@@ -1,12 +1,12 @@
-import { ArrowUpRight, Plus, TrendingUp } from "lucide-react";
+import { ArrowUpRight, Plus, TrendingUp, Wallet, Building2, Layers, PieChart, DoorOpen } from "lucide-react";
 import { PageHeader } from "../components/ui/PageHeader";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { Surface } from "../components/ui/Surface";
-import { StatDisplay } from "../components/ui/StatDisplay";
 import { Button } from "../components/ui/Button";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { Divider } from "../components/ui/Divider";
 import { Avatar } from "../components/ui/Avatar";
+import { MinimalCarousel, type CarouselCard } from "../components/ui/MinimalCarousel";
 import { Link } from "react-router-dom";
 import { usePortfolio } from "../data/PortfolioContext";
 import { portfolioTotals, unitLabel } from "../data/selectors";
@@ -36,6 +36,60 @@ export default function Dashboard() {
     ? Math.round((portfolioStats.collected / portfolioStats.monthlyIncome) * 100)
     : 0;
 
+  const portfolioCards: CarouselCard[] = [
+    {
+      id: "collected",
+      title: "Collected this month",
+      value: currency(portfolioStats.collected),
+      subtitle: `${collectedPct}% of ${currency(portfolioStats.monthlyIncome)} expected · Collection progress: ${collectedPct}%`,
+      color: "bg-[#171717]", // Deep Obsidian / Black
+      icon: Wallet,
+      badge: "On track",
+      actionLabel: "View Payments",
+      actionHref: "#/payments",
+    },
+    {
+      id: "properties",
+      title: "Properties",
+      value: `${portfolioStats.properties} active`,
+      subtitle: `${totals.properties} managed properties in your portfolio`,
+      color: "bg-[#2B7FFF]", // Royal Blue
+      icon: Building2,
+      actionLabel: "View Properties",
+      actionHref: "#/properties",
+    },
+    {
+      id: "units",
+      title: "Total Units",
+      value: `${portfolioStats.units} units`,
+      subtitle: `${totals.occupied} occupied · ${totals.vacant} vacant · ${totals.maintenance} maintenance`,
+      color: "bg-[#AD46FF]", // Vibrant Violet / Purple
+      icon: Layers,
+      actionLabel: "Manage Units",
+      actionHref: "#/properties",
+    },
+    {
+      id: "occupancy",
+      title: "Occupancy Rate",
+      value: `${portfolioStats.occupancy}%`,
+      subtitle: totals.occupancy >= 80 ? "Healthy portfolio occupancy (≥80%)" : "Target occupancy: 90%+",
+      color: "bg-[#00B8DB]", // Electric Cyan / Teal
+      icon: PieChart,
+      actionLabel: "View Tenants",
+      actionHref: "#/tenants",
+    },
+    {
+      id: "vacant",
+      title: "Vacant Units",
+      value: `${portfolioStats.vacant} vacant`,
+      subtitle: portfolioStats.vacant > 0 ? "Requires attention · Unit turnaround needed" : "All units currently leased",
+      color: "bg-[#F59E0B]", // Amber / Warm Orange
+      icon: DoorOpen,
+      actionLabel: "View Vacancies",
+      actionHref: "#/vacant",
+    },
+  ];
+
   return (
     <div className="space-y-6 sm:space-y-10 pb-20 sm:pb-0">
       <PageHeader
@@ -54,64 +108,8 @@ export default function Dashboard() {
         }
       />
 
-      {/* Asymmetric summary — one hero panel + supporting metrics */}
-      <div className="grid gap-4 sm:gap-5 lg:grid-cols-[1.4fr_1fr]">
-        <Surface elevated className="relative flex flex-col justify-between overflow-hidden p-5 sm:p-7 bg-gradient-to-br from-white/95 via-white/80 to-[#fdf7f3]/80">
-          <div className="pointer-events-none absolute -right-12 -top-12 size-32 sm:size-48 rounded-full bg-[var(--color-accent)]/12 blur-2xl sm:blur-3xl" />
-          <div className="relative z-10 flex flex-wrap items-start justify-between gap-3">
-            <StatDisplay
-              size="lg"
-              label="Collected this month"
-              value={currency(portfolioStats.collected)}
-              hint={
-                <span className="inline-flex items-center gap-1.5 font-medium text-[var(--color-positive)]">
-                  <TrendingUp className="size-3.5 stroke-[2]" />
-                  {collectedPct}% of {currency(portfolioStats.monthlyIncome)} expected
-                </span>
-              }
-            />
-            <StatusBadge tone="positive" dot>
-              On track
-            </StatusBadge>
-          </div>
-
-          <div className="relative z-10 mt-6 sm:mt-8">
-            <div className="mb-2 flex items-center justify-between text-[12.5px] text-[var(--color-ink-soft)]">
-              <span>Collection progress</span>
-              <span className="tabular font-semibold text-[var(--color-ink)]">{collectedPct}%</span>
-            </div>
-            <div className="h-2.5 w-full overflow-hidden rounded-full bg-black/5 p-0.5 backdrop-blur-sm">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-[var(--color-accent)] via-[#b87352] to-[#df9e7d] shadow-[0_0_12px_rgba(154,91,63,0.35)] transition-all duration-700"
-                style={{ width: `${collectedPct}%` }}
-              />
-            </div>
-          </div>
-        </Surface>
-
-        <div className="grid grid-cols-2 gap-3 sm:gap-5">
-          <Surface elevated className="relative overflow-hidden p-4 sm:p-6 transition-all duration-300 hover:-translate-y-1">
-            <div className="pointer-events-none absolute -right-6 -bottom-6 size-16 sm:size-24 rounded-full bg-blue-500/8 blur-xl sm:blur-2xl" />
-            <StatDisplay label="Properties" value={portfolioStats.properties} unit="active" />
-          </Surface>
-          <Surface elevated className="relative overflow-hidden p-4 sm:p-6 transition-all duration-300 hover:-translate-y-1">
-            <div className="pointer-events-none absolute -right-6 -bottom-6 size-16 sm:size-24 rounded-full bg-indigo-500/8 blur-xl sm:blur-2xl" />
-            <StatDisplay label="Total units" value={portfolioStats.units} />
-          </Surface>
-          <Surface elevated className="relative overflow-hidden p-4 sm:p-6 transition-all duration-300 hover:-translate-y-1">
-            <div className="pointer-events-none absolute -right-6 -bottom-6 size-16 sm:size-24 rounded-full bg-emerald-500/10 blur-xl sm:blur-2xl" />
-            <StatDisplay label="Occupancy" value={portfolioStats.occupancy} unit="%" />
-          </Surface>
-          <Surface elevated className="relative overflow-hidden p-4 sm:p-6 transition-all duration-300 hover:-translate-y-1">
-            <div className="pointer-events-none absolute -right-6 -bottom-6 size-16 sm:size-24 rounded-full bg-amber-500/10 blur-xl sm:blur-2xl" />
-            <StatDisplay
-              label="Vacant"
-              value={portfolioStats.vacant}
-              hint={<span className="font-medium text-[var(--color-warning)] mt-0.5 block">Needs attention</span>}
-            />
-          </Surface>
-        </div>
-      </div>
+      {/* Minimal Carousel Metric Showcase */}
+      <MinimalCarousel cards={portfolioCards} defaultActiveId="collected" />
 
       {/* Two-column secondary — recent tenants + activity */}
       <div className="grid gap-4 sm:gap-5 lg:grid-cols-2">

@@ -14,3 +14,4 @@ export { EmptyState } from "./EmptyState";
 export { DataRow } from "./DataRow";
 export { PageHeader } from "./PageHeader";
 export { SectionHeader } from "./SectionHeader";
+export { MinimalCarousel, type CarouselCard } from "./MinimalCarousel";
