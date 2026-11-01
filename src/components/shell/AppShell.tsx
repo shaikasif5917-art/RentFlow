@@ -29,7 +29,7 @@ export function AppShell() {
         <main className="flex-1 overflow-y-auto">
           <div
             key={location.pathname}
-            className="animate-fade-rise mx-auto w-full max-w-[1240px] px-5 pb-28 pt-8 sm:px-8 lg:pb-14"
+            className="animate-fade-rise mx-auto w-full max-w-[1240px] px-3.5 pb-24 pt-3.5 sm:px-8 sm:pt-8 lg:pb-14"
           >
             <Outlet />
           </div>

@@ -3,7 +3,7 @@ import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTML
 import { cn } from "../../utils/cn";
 
 const control =
-  "w-full rounded-[12px] border border-white/70 bg-white/60 px-3.5 text-sm text-[var(--color-ink)] backdrop-blur-md shadow-[inset_0_1px_2px_rgba(0,0,0,0.02),0_1px_2px_rgba(255,255,255,0.7)] transition-all duration-200 placeholder:text-[var(--color-ink-faint)] hover:border-[var(--color-line-strong)] hover:bg-white/80 focus:border-[var(--color-accent)] focus:bg-white/95 focus:outline-none focus:ring-4 focus:ring-[var(--color-accent)]/15 focus:shadow-[0_4px_16px_rgba(154,91,63,0.12)] disabled:opacity-50";
+  "w-full rounded-[12px] border border-white/70 bg-white/60 px-3.5 text-base sm:text-sm text-[var(--color-ink)] backdrop-blur-md shadow-[inset_0_1px_2px_rgba(0,0,0,0.02),0_1px_2px_rgba(255,255,255,0.7)] transition-all duration-200 placeholder:text-[var(--color-ink-faint)] hover:border-[var(--color-line-strong)] hover:bg-white/80 focus:border-[var(--color-accent)] focus:bg-white/95 focus:outline-none focus:ring-4 focus:ring-[var(--color-accent)]/15 focus:shadow-[0_4px_16px_rgba(154,91,63,0.12)] disabled:opacity-50";
 
 interface FieldProps {
   label: string;

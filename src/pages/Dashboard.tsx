@@ -41,7 +41,12 @@ export default function Dashboard() {
       id: "collected",
       title: "Collected this month",
       value: currency(portfolioStats.collected),
-      subtitle: `${collectedPct}% of ${currency(portfolioStats.monthlyIncome)} expected · Collection progress: ${collectedPct}%`,
+      mainValue: currency(portfolioStats.collected),
+      trend: `${collectedPct}% of ${currency(portfolioStats.monthlyIncome)} expected`,
+      progress: {
+        value: collectedPct,
+        label: "Collection progress",
+      },
       color: "bg-[#171717]", // Deep Obsidian / Black
       icon: Wallet,
       badge: "On track",
@@ -52,6 +57,8 @@ export default function Dashboard() {
       id: "properties",
       title: "Properties",
       value: `${portfolioStats.properties} active`,
+      mainValue: `${portfolioStats.properties}`,
+      unitSuffix: "active",
       subtitle: `${totals.properties} managed properties in your portfolio`,
       color: "bg-[#2B7FFF]", // Royal Blue
       icon: Building2,
@@ -61,7 +68,9 @@ export default function Dashboard() {
     {
       id: "units",
       title: "Total Units",
-      value: `${portfolioStats.units} units`,
+      value: `${portfolioStats.units}`,
+      mainValue: `${portfolioStats.units}`,
+      unitSuffix: "units",
       subtitle: `${totals.occupied} occupied · ${totals.vacant} vacant · ${totals.maintenance} maintenance`,
       color: "bg-[#AD46FF]", // Vibrant Violet / Purple
       icon: Layers,
@@ -72,6 +81,8 @@ export default function Dashboard() {
       id: "occupancy",
       title: "Occupancy Rate",
       value: `${portfolioStats.occupancy}%`,
+      mainValue: `${portfolioStats.occupancy}`,
+      unitSuffix: "%",
       subtitle: totals.occupancy >= 80 ? "Healthy portfolio occupancy (≥80%)" : "Target occupancy: 90%+",
       color: "bg-[#00B8DB]", // Electric Cyan / Teal
       icon: PieChart,
@@ -81,9 +92,12 @@ export default function Dashboard() {
     {
       id: "vacant",
       title: "Vacant Units",
-      value: `${portfolioStats.vacant} vacant`,
+      value: `${portfolioStats.vacant}`,
+      mainValue: `${portfolioStats.vacant}`,
+      unitSuffix: "vacant",
+      substatus: portfolioStats.vacant > 0 ? "Needs attention" : "All units leased",
       subtitle: portfolioStats.vacant > 0 ? "Requires attention · Unit turnaround needed" : "All units currently leased",
-      color: "bg-[#F59E0B]", // Amber / Warm Orange
+      color: portfolioStats.vacant > 0 ? "bg-[#E16624]" : "bg-[#F59E0B]", // Amber / Warm Orange
       icon: DoorOpen,
       actionLabel: "View Vacancies",
       actionHref: "#/vacant",
@@ -91,7 +105,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="space-y-6 sm:space-y-10 pb-20 sm:pb-0">
+    <div className="space-y-4 sm:space-y-8 pb-16 sm:pb-0">
       <PageHeader
         eyebrow="Portfolio overview"
         title={`${greeting}, ${userName}`}

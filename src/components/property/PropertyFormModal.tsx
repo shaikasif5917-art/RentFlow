@@ -76,7 +76,7 @@ function PropertyForm({ mode, property, onClose, onAdd, onEdit, setIsSubmitting 
   };
 
   return (
-    <form id="property-form" onSubmit={submit} className="space-y-8" noValidate>
+    <form id="property-form" onSubmit={submit} className="space-y-5 sm:space-y-7" noValidate>
       <FormGroup title="PROPERTY DETAILS">
         <Field label="Property name" error={errors.name}>
           <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Green Residency" autoFocus />
