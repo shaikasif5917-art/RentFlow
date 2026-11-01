@@ -5,6 +5,8 @@ import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
 import { cn } from "../utils/cn";
 import { useAuth } from "../contexts/AuthContext";
+import { usePortfolio } from "../data/PortfolioContext";
+import { portfolioTotals } from "../data/selectors";
 import {
   Bell,
   CalendarDays,
@@ -12,8 +14,92 @@ import {
   IndianRupee,
   CalendarRange,
   CreditCard,
+  User,
+  Mail,
+  ShieldCheck,
+  Calendar,
+  Layers,
+  KeyRound,
+  Users,
+  Clock,
+  Sparkles,
 } from "lucide-react";
 import { Select, TextInput } from "../components/ui/Field";
+
+function getOrdinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return s[(v - 20) % 10] || s[v] || s[0];
+}
+
+function formatAccountDate(isoString?: string | null): string {
+  if (!isoString) return "Active member";
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return "Active member";
+    return d.toLocaleDateString("en-IN", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return "Active member";
+  }
+}
+
+function InfoRow({
+  icon: Icon,
+  label,
+  value,
+  subvalue,
+  isBadge,
+  isEmail,
+  isCapitalize,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: React.ReactNode;
+  subvalue?: string;
+  isBadge?: boolean;
+  isEmail?: boolean;
+  isCapitalize?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 transition-colors hover:bg-white/60">
+      <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-[var(--color-surface-muted)] text-[var(--color-ink-soft)] border border-[var(--color-line)]/50">
+          <Icon className="size-3.5" />
+        </div>
+        <span className="truncate text-[12.5px] font-medium text-[var(--color-ink-soft)]">
+          {label}
+        </span>
+      </div>
+      <div className="text-right shrink-0 max-w-[55%]">
+        {isBadge ? (
+          <span className="inline-flex items-center rounded-md bg-[var(--color-surface-muted)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-ink)] border border-[var(--color-line)]/70">
+            {value}
+          </span>
+        ) : (
+          <div
+            className={cn(
+              "text-[13px] font-semibold text-[var(--color-ink)] truncate",
+              isEmail && "font-normal text-[12px]",
+              isCapitalize && "capitalize"
+            )}
+            title={typeof value === "string" ? value : undefined}
+          >
+            {value}
+          </div>
+        )}
+        {subvalue && (
+          <div className="text-[11px] font-medium text-[var(--color-accent)]">
+            {subvalue}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function Toggle({ defaultOn, label }: { defaultOn?: boolean; label: string }) {
   const [on, setOn] = useState(!!defaultOn);
@@ -77,10 +163,12 @@ function SettingRow({
 }
 
 export default function Settings() {
-  const { user, profile } = useAuth();
-  const userName = profile?.full_name || user?.email || "User";
+  const { user, profile, updateProfile } = useAuth();
+  const { properties, units, tenants } = usePortfolio();
+  const totals = portfolioTotals(properties, units, tenants);
+
+  const userName = profile?.full_name || user?.email || "Portfolio Owner";
   const userEmail = user?.email || "";
-  const { updateProfile } = useAuth();
   
   const [editingRentRules, setEditingRentRules] = useState(false);
   const [isSavingRules, setIsSavingRules] = useState(false);
@@ -119,31 +207,100 @@ export default function Settings() {
         description="Manage your profile, preferences, and notifications."
       />
 
-      <div className="grid gap-6 lg:grid-cols-[4fr_6.5fr] items-start">
-        {/* Profile Card */}
-        <Surface elevated className="overflow-hidden p-6 sm:p-8">
+      <div className="grid gap-6 lg:grid-cols-[4.8fr_6.2fr] items-start">
+        {/* Profile & Account Information Card */}
+        <Surface elevated className="overflow-hidden p-5 sm:p-7 space-y-6">
+          {/* Top Profile Header */}
           <div className="flex flex-col items-center text-center">
-            <Avatar name={userName} size="lg" className="size-20 text-xl" />
-            <div className="mt-5">
-              <h2 className="text-lg font-semibold tracking-tight text-[var(--color-ink)]">
+            <div className="relative">
+              <Avatar name={userName} size="lg" className="size-20 text-xl shadow-md border-2 border-white/80" />
+              <div
+                className="absolute -bottom-1 -right-1 flex size-6 items-center justify-center rounded-full bg-[var(--color-surface)] shadow-xs border border-[var(--color-line)] text-[var(--color-accent)]"
+                title="Verified Account"
+              >
+                <ShieldCheck className="size-3.5" />
+              </div>
+            </div>
+            <div className="mt-4">
+              <h2 className="text-lg font-bold tracking-tight text-[var(--color-ink)]">
                 {userName}
               </h2>
-              <p className="mt-1 text-[13.5px] text-[var(--color-ink-soft)]">
+              <p className="mt-0.5 text-[13px] text-[var(--color-ink-soft)] truncate max-w-[260px]">
                 {userEmail}
               </p>
+              <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-[var(--color-surface-muted)] px-3 py-1 text-[11px] font-semibold text-[var(--color-ink-strong)] border border-[var(--color-line)]/70 shadow-2xs">
+                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Portfolio Owner
+              </div>
             </div>
           </div>
-          
-          <div className="mt-8 flex flex-col items-center space-y-3">
-            <Button
-              variant="secondary"
-              className="w-full justify-center transition-all hover:bg-[var(--color-surface-muted)]"
-            >
-              Edit profile
-            </Button>
-            <p className="text-[12px] text-[var(--color-ink-faint)]">
-              Profile editing will be available soon.
-            </p>
+
+          <div className="h-px w-full bg-[var(--color-line)]/70" />
+
+          {/* Account Information Sections */}
+          <div className="space-y-5">
+            <div className="border-b border-[var(--color-line)]/60 pb-2">
+              <h3 className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-ink-faint)] flex items-center gap-1.5">
+                <Sparkles className="size-3.5 text-[var(--color-accent)]" />
+                Account Information
+              </h3>
+            </div>
+
+            {/* 1. Personal Information */}
+            <div className="space-y-2">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">
+                Personal Information
+              </div>
+              <div className="rounded-xl border border-[var(--color-line)]/70 bg-white/40 divide-y divide-[var(--color-line)]/50 overflow-hidden shadow-2xs">
+                <InfoRow icon={User} label="Full name" value={userName} />
+                <InfoRow icon={Mail} label="Registered email" value={userEmail || "Not provided"} isEmail />
+                <InfoRow icon={ShieldCheck} label="Account role" value="Portfolio Owner" isBadge />
+                <InfoRow icon={Calendar} label="Member since" value={formatAccountDate(user?.created_at)} />
+              </div>
+            </div>
+
+            {/* 2. Portfolio Information */}
+            <div className="space-y-2">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">
+                Portfolio Information
+              </div>
+              <div className="rounded-xl border border-[var(--color-line)]/70 bg-white/40 divide-y divide-[var(--color-line)]/50 overflow-hidden shadow-2xs">
+                <InfoRow icon={Building2} label="Total properties" value={`${totals.properties} ${totals.properties === 1 ? "property" : "properties"}`} />
+                <InfoRow icon={Layers} label="Total units" value={`${totals.units} units`} />
+                <InfoRow
+                  icon={KeyRound}
+                  label="Occupied units"
+                  value={`${totals.occupied} units`}
+                  subvalue={totals.units > 0 ? `${Math.round(totals.occupancy)}% occupancy` : undefined}
+                />
+                <InfoRow icon={Users} label="Active tenants" value={`${tenants.length} tenants`} />
+              </div>
+            </div>
+
+            {/* 3. Account Preferences */}
+            <div className="space-y-2">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">
+                Account Preferences
+              </div>
+              <div className="rounded-xl border border-[var(--color-line)]/70 bg-white/40 divide-y divide-[var(--color-line)]/50 overflow-hidden shadow-2xs">
+                <InfoRow
+                  icon={CreditCard}
+                  label="Collection method"
+                  value={profile?.rent_collection_method ? (profile.rent_collection_method === "prepaid" ? "Prepaid" : "Postpaid") : "Prepaid (Default)"}
+                  isCapitalize
+                />
+                <InfoRow
+                  icon={CalendarDays}
+                  label="Default rent due day"
+                  value={profile?.default_due_day ? `${profile.default_due_day}${getOrdinal(profile.default_due_day)} of the month` : "1st of the month"}
+                />
+                <InfoRow
+                  icon={Clock}
+                  label="Grace period"
+                  value={profile?.grace_period_days !== null && profile?.grace_period_days !== undefined ? `${profile.grace_period_days} days` : "5 days"}
+                />
+              </div>
+            </div>
           </div>
         </Surface>
 
