@@ -22,6 +22,9 @@ import {
   KeyRound,
   Users,
   Sparkles,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 import { Select, TextInput } from "../components/ui/Field";
 
@@ -163,6 +166,24 @@ export default function Settings() {
   const userName = profile?.full_name || user?.email || "Portfolio Owner";
   const userEmail = user?.email || "";
   
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState(profile?.full_name || "");
+  const [isSavingName, setIsSavingName] = useState(false);
+
+  const handleSaveName = async () => {
+    const trimmed = editedName.trim();
+    if (!trimmed) return;
+    setIsSavingName(true);
+    try {
+      await updateProfile({ full_name: trimmed });
+      setIsEditingName(false);
+    } catch (err) {
+      console.error("Failed to update name:", err);
+    } finally {
+      setIsSavingName(false);
+    }
+  };
+
   const [editingRentRules, setEditingRentRules] = useState(false);
   const [isSavingRules, setIsSavingRules] = useState(false);
   
@@ -245,7 +266,83 @@ export default function Settings() {
                 Personal Information
               </div>
               <div className="rounded-xl border border-[var(--color-line)]/70 bg-white/40 divide-y divide-[var(--color-line)]/50 overflow-hidden shadow-2xs">
-                <InfoRow icon={User} label="Full name" value={userName} />
+                {isEditingName ? (
+                  <div className="flex items-center justify-between gap-2 px-3.5 py-2 transition-colors bg-white/70">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-[var(--color-surface-muted)] text-[var(--color-ink-soft)] border border-[var(--color-line)]/50">
+                        <User className="size-3.5" />
+                      </div>
+                      <span className="truncate text-[12.5px] font-medium text-[var(--color-ink-soft)]">
+                        Full name
+                      </span>
+                    </div>
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        handleSaveName();
+                      }}
+                      className="flex items-center gap-1.5"
+                    >
+                      <input
+                        type="text"
+                        value={editedName}
+                        onChange={(e) => setEditedName(e.target.value)}
+                        className="h-7 w-32 sm:w-44 rounded-md border border-[var(--color-accent)] bg-white px-2 text-[13px] font-medium text-[var(--color-ink)] shadow-2xs focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+                        placeholder="Full name"
+                        autoFocus
+                        disabled={isSavingName}
+                      />
+                      <button
+                        type="submit"
+                        disabled={isSavingName || !editedName.trim()}
+                        className="inline-flex size-7 items-center justify-center rounded-md bg-[var(--color-accent)] text-white shadow-2xs hover:bg-[#8f4a33] disabled:opacity-50 transition-colors cursor-pointer"
+                        title="Save name"
+                      >
+                        <Check className="size-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isSavingName}
+                        onClick={() => {
+                          setEditedName(profile?.full_name || userName);
+                          setIsEditingName(false);
+                        }}
+                        className="inline-flex size-7 items-center justify-center rounded-md border border-[var(--color-line)] bg-white/80 text-[var(--color-ink-soft)] hover:bg-[var(--color-surface-muted)] transition-colors cursor-pointer"
+                        title="Cancel"
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    </form>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 transition-colors hover:bg-white/60">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-[var(--color-surface-muted)] text-[var(--color-ink-soft)] border border-[var(--color-line)]/50">
+                        <User className="size-3.5" />
+                      </div>
+                      <span className="truncate text-[12.5px] font-medium text-[var(--color-ink-soft)]">
+                        Full name
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[13px] font-semibold text-[var(--color-ink)] truncate max-w-[140px] sm:max-w-[190px]">
+                        {userName}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditedName(profile?.full_name || userName);
+                          setIsEditingName(true);
+                        }}
+                        className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium text-[var(--color-ink-soft)] hover:text-[var(--color-ink-strong)] hover:bg-[var(--color-surface-muted)] transition-all cursor-pointer border border-transparent hover:border-[var(--color-line)]"
+                        title="Edit name"
+                      >
+                        <Pencil className="size-3 text-[var(--color-accent)]" />
+                        <span>Edit</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <InfoRow icon={Mail} label="Registered email" value={userEmail || "Not provided"} isEmail />
                 <InfoRow icon={ShieldCheck} label="Account role" value="Portfolio Owner" isBadge />
                 <InfoRow icon={Calendar} label="Member since" value={formatAccountDate(user?.created_at)} />
