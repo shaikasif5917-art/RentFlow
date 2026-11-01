@@ -32,6 +32,14 @@ import {
   type RentCollectionMethod,
 } from "../utils/billing";
 import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectGroup,
+  SelectLabel,
+  SelectItem,
+} from "../components/ui/Select";
+import {
   UpdateRentModal,
   EditTenantNameModal,
 } from "../components/property/UnitModals";
@@ -64,31 +72,72 @@ export default function Tenants() {
 
   const [selectedMonth, setSelectedMonth] = useState<string>(currentCalendarMonth);
 
-  // Generate available months (e.g. past 6 months through next 2 months + database history)
-  const availableMonths = useMemo(() => {
-    const monthsSet = new Set<string>();
+  // Generate dynamic year groups spanning from earliest history through at least 24 months into future
+  const yearGroups = useMemo(() => {
     const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
 
-    // 6 months in the past through 2 months in the future
-    for (let i = -6; i <= 2; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      monthsSet.add(`${y}-${m}-01`);
-    }
-
-    // Add existing payment billing months
+    // Determine earliest relevant billing year from payments and tenants
+    let minYear = currentYear - 1;
     payments.forEach((p) => {
       if (p.billingMonth) {
-        monthsSet.add(p.billingMonth.substring(0, 7) + "-01");
+        const yr = parseInt(p.billingMonth.substring(0, 4), 10);
+        if (!isNaN(yr) && yr < minYear && yr >= 2020) minYear = yr;
+      }
+    });
+    tenants.forEach((t) => {
+      if (t.since) {
+        const yr = parseInt(t.since.substring(0, 4), 10);
+        if (!isNaN(yr) && yr < minYear && yr >= 2020) minYear = yr;
       }
     });
 
-    // Ensure active cycle month is always included
-    monthsSet.add(activeCycleMonth);
+    // Determine latest year: at least 24 months into the future
+    const futureDate = new Date(currentYear, currentMonth + 24, 1);
+    const maxYear = futureDate.getFullYear();
 
-    return Array.from(monthsSet).sort().reverse(); // Chronological reverse (latest first)
-  }, [payments, activeCycleMonth]);
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December",
+    ];
+
+    const groups: {
+      year: number;
+      months: {
+        value: string;
+        monthName: string;
+        isCurrent: boolean;
+        isActiveCycle: boolean;
+      }[];
+    }[] = [];
+
+    // Order years: latest/future first down to earliest (e.g. 2028, 2027, 2026, 2025)
+    for (let yr = maxYear; yr >= minYear; yr--) {
+      const monthsInYear = [];
+      for (let m = 0; m < 12; m++) {
+        const d = new Date(yr, m, 1);
+        if (d > futureDate) continue;
+
+        const monthStr = `${yr}-${String(m + 1).padStart(2, "0")}-01`;
+        monthsInYear.push({
+          value: monthStr,
+          monthName: monthNames[m],
+          isCurrent: monthStr === currentCalendarMonth,
+          isActiveCycle: monthStr === activeCycleMonth && activeCycleMonth !== currentCalendarMonth,
+        });
+      }
+
+      if (monthsInYear.length > 0) {
+        groups.push({
+          year: yr,
+          months: monthsInYear,
+        });
+      }
+    }
+
+    return groups;
+  }, [payments, tenants, currentCalendarMonth, activeCycleMonth]);
 
   // Format month to human label (e.g. "October 2026")
   const formatMonthName = (monthStr: string) => {
@@ -108,20 +157,45 @@ export default function Tenants() {
     [selectedMonth],
   );
 
-  // Navigation handlers
-  const currentIdx = availableMonths.indexOf(selectedMonth);
-  const hasNextMonth = currentIdx > 0; // newer month
-  const hasPrevMonth = currentIdx >= 0 && currentIdx < availableMonths.length - 1; // older month
+  // Min and max available dates for navigation bounds
+  const minAvailableMonth = useMemo(() => {
+    if (yearGroups.length === 0) return "";
+    const earliestGroup = yearGroups[yearGroups.length - 1];
+    return earliestGroup.months[0]?.value || "";
+  }, [yearGroups]);
 
+  const maxAvailableMonth = useMemo(() => {
+    if (yearGroups.length === 0) return "";
+    const latestGroup = yearGroups[0];
+    return latestGroup.months[latestGroup.months.length - 1]?.value || "";
+  }, [yearGroups]);
+
+  const hasPrevMonth = Boolean(minAvailableMonth && selectedMonth > minAvailableMonth);
+  const hasNextMonth = Boolean(maxAvailableMonth && selectedMonth < maxAvailableMonth);
+
+  // Navigate exactly one calendar month backward, seamlessly across year boundaries
   const handlePrevMonth = () => {
-    if (hasPrevMonth) {
-      setSelectedMonth(availableMonths[currentIdx + 1]);
+    if (!hasPrevMonth) return;
+    const { year, monthIndex } = parseBillingMonth(selectedMonth);
+    const prevDate = new Date(year, monthIndex - 1, 1);
+    const prevYear = prevDate.getFullYear();
+    const prevMonth = String(prevDate.getMonth() + 1).padStart(2, "0");
+    const nextVal = `${prevYear}-${prevMonth}-01`;
+    if (!minAvailableMonth || nextVal >= minAvailableMonth) {
+      setSelectedMonth(nextVal);
     }
   };
 
+  // Navigate exactly one calendar month forward, seamlessly across year boundaries
   const handleNextMonth = () => {
-    if (hasNextMonth) {
-      setSelectedMonth(availableMonths[currentIdx - 1]);
+    if (!hasNextMonth) return;
+    const { year, monthIndex } = parseBillingMonth(selectedMonth);
+    const nextDate = new Date(year, monthIndex + 1, 1);
+    const nextYear = nextDate.getFullYear();
+    const nextMonth = String(nextDate.getMonth() + 1).padStart(2, "0");
+    const nextVal = `${nextYear}-${nextMonth}-01`;
+    if (!maxAvailableMonth || nextVal <= maxAvailableMonth) {
+      setSelectedMonth(nextVal);
     }
   };
 
@@ -270,30 +344,56 @@ export default function Tenants() {
               disabled={!hasPrevMonth}
               title="Previous Month"
               aria-label="Previous Month"
-              className="flex size-8 items-center justify-center rounded-lg text-[#2b3428] hover:bg-[#e9f5db] disabled:opacity-30 disabled:pointer-events-none cursor-pointer transition-colors"
+              className="flex size-8 items-center justify-center rounded-lg text-[#2b3428] hover:bg-[#e9f5db] disabled:opacity-30 disabled:pointer-events-none cursor-pointer transition-colors shrink-0"
             >
               <ChevronLeft className="size-4" />
             </button>
 
-            <div className="relative px-2">
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                className="appearance-none bg-transparent pr-6 text-[13.5px] font-bold text-[#2b3428] focus:outline-none cursor-pointer"
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger
+                hideChevron={false}
+                className="border-0 shadow-none px-2.5 py-1 h-8 rounded-lg bg-transparent hover:bg-[#e9f5db]/60 focus:ring-0 text-[#2b3428] font-bold text-[13px] gap-2 max-w-[240px] sm:max-w-none"
               >
-                {availableMonths.map((m) => (
-                  <option key={m} value={m}>
-                    {formatMonthName(m)}
-                    {m === currentCalendarMonth
-                      ? " • Current Month"
-                      : m === activeCycleMonth
-                        ? " • Active Cycle"
-                        : ""}
-                  </option>
+                <Calendar className="size-3.5 text-[#718355] shrink-0" />
+                <span className="truncate">
+                  {selectedMonthLabel}
+                  {selectedMonth === currentCalendarMonth && " • Current Month"}
+                  {selectedMonth === activeCycleMonth &&
+                    activeCycleMonth !== currentCalendarMonth &&
+                    " • Active Cycle"}
+                </span>
+              </SelectTrigger>
+
+              <SelectContent
+                align="left"
+                className="w-[280px] sm:w-[320px] max-h-[380px]"
+              >
+                {yearGroups.map((group) => (
+                  <SelectGroup key={group.year}>
+                    <SelectLabel>{group.year}</SelectLabel>
+                    {group.months.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>
+                        <div className="flex items-center justify-between w-full">
+                          <span>
+                            {m.monthName} {group.year}
+                          </span>
+                          {m.isCurrent && (
+                            <span className="ml-2 rounded-full bg-[#718355]/15 px-2 py-0.5 text-[9.5px] font-bold text-[#55693c] border border-[#718355]/25 shrink-0">
+                              Current Month
+                            </span>
+                          )}
+                          {m.isActiveCycle && (
+                            <span className="ml-2 rounded-full bg-[#c2883c]/15 px-2 py-0.5 text-[9.5px] font-bold text-[#945f22] border border-[#c2883c]/25 shrink-0">
+                              Active Cycle
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 ))}
-              </select>
-              <Calendar className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 size-3.5 text-[#718355]" />
-            </div>
+              </SelectContent>
+            </Select>
 
             <button
               type="button"
@@ -301,7 +401,7 @@ export default function Tenants() {
               disabled={!hasNextMonth}
               title="Next Month"
               aria-label="Next Month"
-              className="flex size-8 items-center justify-center rounded-lg text-[#2b3428] hover:bg-[#e9f5db] disabled:opacity-30 disabled:pointer-events-none cursor-pointer transition-colors"
+              className="flex size-8 items-center justify-center rounded-lg text-[#2b3428] hover:bg-[#e9f5db] disabled:opacity-30 disabled:pointer-events-none cursor-pointer transition-colors shrink-0"
             >
               <ChevronRight className="size-4" />
             </button>
@@ -311,7 +411,7 @@ export default function Tenants() {
             <button
               type="button"
               onClick={() => setSelectedMonth(currentCalendarMonth)}
-              className="text-[12px] font-semibold text-[#718355] hover:text-[#2b3428] hover:underline cursor-pointer px-1.5 py-1"
+              className="text-[12px] font-semibold text-[#718355] hover:text-[#2b3428] hover:underline cursor-pointer px-1.5 py-1 transition-colors"
             >
               Reset to Current Month
             </button>
