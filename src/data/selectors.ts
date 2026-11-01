@@ -54,7 +54,11 @@ export interface MonthlyTenantsSummary {
   overdueCount: number;
   expected: number;
   collected: number;
+  due: number;
+  overdue: number;
   outstanding: number;
+  collectionRate: number;
+  completedTransactionsCount: number;
 }
 
 export function getMonthlyTenantsSummary(
@@ -72,6 +76,8 @@ export function getMonthlyTenantsSummary(
   let overdueCount = 0;
   let expected = 0;
   let collected = 0;
+  let due = 0;
+  let overdue = 0;
 
   for (const t of tenants) {
     const monthStatus = getTenantMonthStatus(
@@ -92,11 +98,19 @@ export function getMonthlyTenantsSummary(
         collected += monthStatus.amount;
       } else if (monthStatus.status === "overdue") {
         overdueCount++;
+        overdue += monthStatus.amount;
       } else {
         dueCount++;
+        due += monthStatus.amount;
       }
     }
   }
+
+  const completedTransactionsCount = payments.filter(
+    (p) => p.billingMonth === billingMonth && p.state === "paid"
+  ).length;
+
+  const collectionRate = expected > 0 ? Math.round((collected / expected) * 100) : 0;
 
   return {
     eligibleCount,
@@ -105,7 +119,11 @@ export function getMonthlyTenantsSummary(
     overdueCount,
     expected,
     collected,
+    due,
+    overdue,
     outstanding: Math.max(0, expected - collected),
+    collectionRate,
+    completedTransactionsCount,
   };
 }
 

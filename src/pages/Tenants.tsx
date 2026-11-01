@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Calendar,
@@ -26,6 +26,7 @@ import {
 } from "../data/selectors";
 import { currency } from "../utils/format";
 import {
+  getCurrentBillingMonth,
   getActiveCollectionMonth,
   parseBillingMonth,
   type RentCollectionMethod,
@@ -55,18 +56,13 @@ export default function Tenants() {
   const dueDay = profile?.default_due_day || 1;
   const gracePeriod = profile?.grace_period_days || 0;
 
-  // Active collection cycle month based on billing rules (postpaid = preceding month, prepaid = current)
+  const currentCalendarMonth = useMemo(() => getCurrentBillingMonth(new Date()), []);
   const activeCycleMonth = useMemo(
     () => getActiveCollectionMonth(collectionMethod, new Date()),
     [collectionMethod],
   );
 
-  const [selectedMonth, setSelectedMonth] = useState<string>(activeCycleMonth);
-
-  // Sync when activeCycleMonth resolves
-  useEffect(() => {
-    setSelectedMonth(activeCycleMonth);
-  }, [activeCycleMonth]);
+  const [selectedMonth, setSelectedMonth] = useState<string>(currentCalendarMonth);
 
   // Generate available months (e.g. past 6 months through next 2 months + database history)
   const availableMonths = useMemo(() => {
@@ -179,11 +175,15 @@ export default function Tenants() {
               <span>Month Overview</span>
               <span>·</span>
               <span>{selectedMonthLabel}</span>
-              {selectedMonth === activeCycleMonth && (
+              {selectedMonth === currentCalendarMonth ? (
                 <span className="rounded-full bg-[#718355] px-2 py-0.5 text-[9.5px] font-bold text-white tracking-normal">
-                  Active Cycle
+                  Current Month
                 </span>
-              )}
+              ) : selectedMonth === activeCycleMonth ? (
+                <span className="rounded-full bg-[#87986a] px-2 py-0.5 text-[9.5px] font-bold text-white tracking-normal">
+                  Active Billing Cycle
+                </span>
+              ) : null}
             </div>
             <div className="mt-1 flex items-baseline gap-2 flex-wrap">
               <span className="text-xl sm:text-2xl font-bold tracking-tight text-[#2b3428]">
@@ -284,7 +284,11 @@ export default function Tenants() {
                 {availableMonths.map((m) => (
                   <option key={m} value={m}>
                     {formatMonthName(m)}
-                    {m === activeCycleMonth ? " • Current Cycle" : ""}
+                    {m === currentCalendarMonth
+                      ? " • Current Month"
+                      : m === activeCycleMonth
+                        ? " • Active Cycle"
+                        : ""}
                   </option>
                 ))}
               </select>
@@ -303,13 +307,13 @@ export default function Tenants() {
             </button>
           </div>
 
-          {selectedMonth !== activeCycleMonth && (
+          {selectedMonth !== currentCalendarMonth && (
             <button
               type="button"
-              onClick={() => setSelectedMonth(activeCycleMonth)}
+              onClick={() => setSelectedMonth(currentCalendarMonth)}
               className="text-[12px] font-semibold text-[#718355] hover:text-[#2b3428] hover:underline cursor-pointer px-1.5 py-1"
             >
-              Reset to Current Cycle
+              Reset to Current Month
             </button>
           )}
         </div>

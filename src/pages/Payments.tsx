@@ -10,59 +10,61 @@ import { Divider } from "../components/ui/Divider";
 import { SearchField } from "../components/ui/SearchField";
 import { Segmented } from "../components/ui/Segmented";
 import { usePortfolio } from "../data/PortfolioContext";
-import { portfolioTotals, plural } from "../data/selectors";
+import { plural, getMonthlyTenantsSummary } from "../data/selectors";
 import { currency, paymentLabel, paymentTone } from "../utils/format";
-import { getActiveCollectionMonth, type RentCollectionMethod } from "../utils/billing";
+import { getCurrentBillingMonth, getActiveCollectionMonth, type RentCollectionMethod } from "../utils/billing";
 import type { PaymentState } from "../data/types";
 
 export default function Payments() {
-  const { payments, properties, units, tenants, profile, isLoading } = usePortfolio();
+  const { payments, tenants, profile, isLoading } = usePortfolio();
 
   const collectionMethod = (profile?.rent_collection_method as RentCollectionMethod) || "prepaid";
+  const currentCalendarMonth = useMemo(() => getCurrentBillingMonth(new Date()), []);
   const activeCycleMonth = useMemo(() => getActiveCollectionMonth(collectionMethod, new Date()), [collectionMethod]);
   
   const [query, setQuery] = useState("");
   const [filterState, setFilterState] = useState<PaymentState | "all">("all");
-  const [monthFilter, setMonthFilter] = useState(activeCycleMonth);
-
-  const totals = portfolioTotals(properties, units, tenants);
+  const [monthFilter, setMonthFilter] = useState(currentCalendarMonth);
   
   const months = useMemo(() => {
     const m = new Set(payments.map(p => p.billingMonth));
-    m.add(activeCycleMonth);
+    m.add(currentCalendarMonth);
     return Array.from(m).filter(Boolean).sort().reverse();
-  }, [payments, activeCycleMonth]);
+  }, [payments, currentCalendarMonth]);
 
-  // Dynamically compute summary figures directly from the actual Supabase payment records
+  // Dynamically compute summary figures using the unified monthly calculation engine
   const summaryTotals = useMemo(() => {
-    // If a specific month is selected, compute for that month
-    // If "all" is selected, compute across all payments in the ledger (or active cycle)
-    const targetPayments = monthFilter === "all"
-      ? payments
-      : payments.filter((p) => p.billingMonth === monthFilter);
+    if (monthFilter === "all") {
+      const collected = payments
+        .filter((p) => p.state === "paid")
+        .reduce((sum, p) => sum + p.amount, 0);
 
-    if (targetPayments.length === 0) {
-      return {
-        collected: totals.collected,
-        outstanding: totals.outstanding,
-        expected: totals.expected,
-        pendingCount: tenants.filter((t) => t.state !== "paid").length,
-      };
+      const outstanding = payments
+        .filter((p) => p.state !== "paid")
+        .reduce((sum, p) => sum + p.amount, 0);
+
+      const expected = collected + outstanding;
+      const pendingCount = payments.filter((p) => p.state !== "paid").length;
+      return { collected, outstanding, expected, pendingCount };
     }
 
-    const collected = targetPayments
-      .filter((p) => p.state === "paid")
-      .reduce((sum, p) => sum + p.amount, 0);
+    const summary = getMonthlyTenantsSummary(
+      tenants,
+      monthFilter,
+      payments,
+      collectionMethod,
+      profile?.default_due_day ?? 1,
+      profile?.grace_period_days ?? 0,
+      new Date(),
+    );
 
-    const outstanding = targetPayments
-      .filter((p) => p.state !== "paid")
-      .reduce((sum, p) => sum + p.amount, 0);
-
-    const expected = collected + outstanding;
-    const pendingCount = targetPayments.filter((p) => p.state !== "paid").length;
-
-    return { collected, outstanding, expected, pendingCount };
-  }, [payments, monthFilter, totals, tenants]);
+    return {
+      collected: summary.collected,
+      outstanding: summary.outstanding,
+      expected: summary.expected,
+      pendingCount: summary.dueCount + summary.overdueCount,
+    };
+  }, [payments, monthFilter, tenants, collectionMethod, profile]);
 
   const visiblePayments = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -149,7 +151,11 @@ export default function Payments() {
                 {months.map((m) => (
                   <option key={m} value={m}>
                     {new Date(m).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })}
-                    {m === activeCycleMonth ? ' • Current' : ''}
+                    {m === currentCalendarMonth
+                      ? ' • Current Month'
+                      : m === activeCycleMonth
+                        ? ' • Active Cycle'
+                        : ''}
                   </option>
                 ))}
                 <option value="all">All History</option>
@@ -179,7 +185,11 @@ export default function Payments() {
               {months.map((m) => (
                 <option key={m} value={m}>
                   {new Date(m).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
-                  {m === activeCycleMonth ? ' • Current Cycle' : ''}
+                  {m === currentCalendarMonth
+                    ? ' • Current Month'
+                    : m === activeCycleMonth
+                      ? ' • Active Cycle'
+                      : ''}
                 </option>
               ))}
               <option value="all">All Months / All History</option>

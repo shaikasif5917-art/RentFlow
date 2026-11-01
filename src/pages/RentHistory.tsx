@@ -14,9 +14,10 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { Surface } from "../components/ui/Surface";
 import { StatDisplay } from "../components/ui/StatDisplay";
 import { usePortfolio } from "../data/PortfolioContext";
-import { portfolioTotals } from "../data/selectors";
+import { portfolioTotals, getMonthlyTenantsSummary } from "../data/selectors";
 import { currency } from "../utils/format";
 import { cn } from "../utils/cn";
+import type { RentCollectionMethod } from "../utils/billing";
 
 type ChartMode = "status" | "method";
 
@@ -48,13 +49,16 @@ interface MonthData {
 }
 
 export default function RentHistory() {
-  const { properties, units, tenants, payments } = usePortfolio();
+  const { properties, units, tenants, payments, profile } = usePortfolio();
   const totals = portfolioTotals(properties, units, tenants);
   const [selectedMonthIdx, setSelectedMonthIdx] = useState<number>(5); // Default to current month (last slot)
   const [chartMode, setChartMode] = useState<ChartMode>("status");
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
   const baselineRent = totals.expected > 0 ? totals.expected : 42500;
+  const collectionMethod = (profile?.rent_collection_method as RentCollectionMethod) || "prepaid";
+  const dueDay = profile?.default_due_day || 1;
+  const grace = profile?.grace_period_days || 0;
 
   // Build 6 consecutive months leading up to today
   const monthsData = useMemo<MonthData[]>(() => {
@@ -77,48 +81,53 @@ export default function RentHistory() {
       const isCurrent = offset === 0;
 
       // Filter real payment records for this month using authoritative billingMonth
-      // Only fallback to date if billingMonth is absent, preventing double-counting
       const monthPayments = payments.filter((p) => {
         if (p.billingMonth) return p.billingMonth.startsWith(monthPrefix);
         return p.date ? p.date.startsWith(monthPrefix) : false;
       });
 
+      const hasDirectRecords = monthPayments.length > 0;
+
+      const summary = getMonthlyTenantsSummary(
+        tenants,
+        monthKey,
+        payments,
+        collectionMethod,
+        dueDay,
+        grace,
+        now,
+      );
+
       let paid = 0;
       let due = 0;
       let overdue = 0;
-      let expected = baselineRent;
+      let expected = 0;
       const methodCounts = { upi: 0, bank: 0, cash: 0, cheque: 0 };
       const methodAmounts = { upi: 0, bank: 0, cash: 0, cheque: 0 };
 
-      if (monthPayments.length > 0) {
-        monthPayments.forEach((p) => {
-          if (p.state === "paid") paid += p.amount;
-          else if (p.state === "due") due += p.amount;
-          else if (p.state === "overdue") overdue += p.amount;
+      if (hasDirectRecords || isCurrent) {
+        paid = summary.collected;
+        due = summary.due;
+        overdue = summary.overdue;
+        expected = summary.expected > 0 ? summary.expected : baselineRent;
 
+        const completedForMonth = monthPayments.filter((p) => p.state === "paid");
+        completedForMonth.forEach((p) => {
           const m = p.method?.toLowerCase() || "upi";
           if (m.includes("upi")) {
             methodCounts.upi++;
-            if (p.state === "paid") methodAmounts.upi += p.amount;
+            methodAmounts.upi += p.amount;
           } else if (m.includes("bank") || m.includes("transfer")) {
             methodCounts.bank++;
-            if (p.state === "paid") methodAmounts.bank += p.amount;
+            methodAmounts.bank += p.amount;
           } else if (m.includes("cash")) {
             methodCounts.cash++;
-            if (p.state === "paid") methodAmounts.cash += p.amount;
+            methodAmounts.cash += p.amount;
           } else {
             methodCounts.cheque++;
-            if (p.state === "paid") methodAmounts.cheque += p.amount;
+            methodAmounts.cheque += p.amount;
           }
         });
-        expected = paid + due + overdue;
-      } else if (isCurrent) {
-        paid = totals.collected;
-        overdue = totals.outstanding;
-        due = Math.max(0, totals.expected - totals.collected - totals.outstanding);
-        expected = totals.expected > 0 ? totals.expected : baselineRent;
-        methodAmounts.upi = paid;
-        methodCounts.upi = paid > 0 ? 1 : 0;
       } else {
         // Fallback realistic historical numbers for months before onboarding
         const factor = fallbackFactors[i];
@@ -127,7 +136,6 @@ export default function RentHistory() {
         due = Math.round(expected * 0.03);
         overdue = expected - paid - due;
 
-        // Estimated method distribution
         methodAmounts.upi = Math.round(paid * 0.65);
         methodAmounts.bank = Math.round(paid * 0.25);
         methodAmounts.cash = paid - methodAmounts.upi - methodAmounts.bank;
@@ -138,7 +146,9 @@ export default function RentHistory() {
 
       const totalCollected = paid;
       const collectionRate = expected > 0 ? Math.round((totalCollected / expected) * 100) : 0;
-      const txCount = monthPayments.length > 0 ? monthPayments.length : Math.max(1, tenants.length);
+      const txCount = (hasDirectRecords || isCurrent)
+        ? monthPayments.filter((p) => p.state === "paid").length
+        : Math.round(tenants.length * 0.9);
 
       return {
         monthKey,
@@ -157,7 +167,7 @@ export default function RentHistory() {
         methodAmounts,
       };
     });
-  }, [payments, totals, baselineRent, tenants.length]);
+  }, [payments, tenants, baselineRent, collectionMethod, dueDay, grace]);
 
   const activeMonth = monthsData[selectedMonthIdx] || monthsData[5];
 
@@ -506,17 +516,17 @@ export default function RentHistory() {
                 </div>
               </div>
 
-              {/* Collection Efficiency */}
+              {/* Completed Transactions */}
               <div className="rounded-xl border border-[var(--color-line)]/60 bg-white/70 p-3 sm:p-3.5">
                 <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">
                   <Receipt className="size-3.5 text-[#8c9a6e]" />
                   <span>Transactions</span>
                 </div>
                 <div className="mt-1 text-lg sm:text-xl font-bold text-[var(--color-ink)]">
-                  {activeMonth.txCount} {activeMonth.txCount === 1 ? "unit" : "units"}
+                  {activeMonth.txCount} {activeMonth.txCount === 1 ? "payment" : "payments"}
                 </div>
                 <div className="mt-0.5 text-[11px] text-[var(--color-ink-soft)] font-medium">
-                  Managed billing roll
+                  {activeMonth.txCount > 0 ? "Completed payments" : "No payments received"}
                 </div>
               </div>
             </div>

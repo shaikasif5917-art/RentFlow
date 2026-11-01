@@ -10,11 +10,11 @@ import { Avatar } from "../components/ui/Avatar";
 import { MinimalCarousel, type CarouselCard } from "../components/ui/MinimalCarousel";
 import { Link } from "react-router-dom";
 import { usePortfolio } from "../data/PortfolioContext";
-import { portfolioTotals, unitLabel } from "../data/selectors";
+import { portfolioTotals, getMonthlyTenantsSummary, unitLabel } from "../data/selectors";
 import { currency, paymentLabel, paymentTone } from "../utils/format";
 import { useAuth } from "../contexts/AuthContext";
 import { useLocalTime } from "../hooks/useLocalTime";
-import { getActiveCollectionMonth, type RentCollectionMethod } from "../utils/billing";
+import { getCurrentBillingMonth, type RentCollectionMethod } from "../utils/billing";
 
 const stateOrder = { overdue: 0, due: 1, paid: 2 } as const;
 
@@ -22,50 +22,37 @@ export default function Dashboard() {
   const { profile } = useAuth();
   const userName = profile?.full_name || "Portfolio Owner";
   const { properties, units, tenants: allTenants, payments, activity: allActivity } = usePortfolio();
-  const totals = portfolioTotals(properties, units, allTenants);
 
   const collectionMethod = (profile?.rent_collection_method as RentCollectionMethod) || "prepaid";
-  const activeCycleMonth = useMemo(() => getActiveCollectionMonth(collectionMethod, new Date()), [collectionMethod]);
-  const cyclePayments = useMemo(
-    () => payments.filter((p) => p.billingMonth === activeCycleMonth),
-    [payments, activeCycleMonth]
-  );
+  const currentCalendarMonth = useMemo(() => getCurrentBillingMonth(new Date()), []);
 
-  const cycleCollected = useMemo(() => {
-    if (cyclePayments.length > 0) {
-      return cyclePayments.filter((p) => p.state === "paid").reduce((sum, p) => sum + p.amount, 0);
-    }
-    return totals.collected;
-  }, [cyclePayments, totals.collected]);
+  const currentSummary = useMemo(() => {
+    return getMonthlyTenantsSummary(
+      allTenants,
+      currentCalendarMonth,
+      payments,
+      collectionMethod,
+      profile?.default_due_day ?? 1,
+      profile?.grace_period_days ?? 0,
+      new Date(),
+    );
+  }, [allTenants, currentCalendarMonth, payments, collectionMethod, profile]);
 
-  const cycleOutstanding = useMemo(() => {
-    if (cyclePayments.length > 0) {
-      return cyclePayments.filter((p) => p.state !== "paid").reduce((sum, p) => sum + p.amount, 0);
-    }
-    return totals.outstanding;
-  }, [cyclePayments, totals.outstanding]);
-
-  const cycleExpected = useMemo(() => {
-    if (cyclePayments.length > 0) {
-      return cycleCollected + cycleOutstanding;
-    }
-    return totals.expected;
-  }, [cyclePayments, cycleCollected, cycleOutstanding, totals.expected]);
+  const totals = portfolioTotals(properties, units, allTenants, payments, currentCalendarMonth);
 
   const portfolioStats = {
-    collected: cycleCollected,
-    monthlyIncome: cycleExpected,
+    collected: currentSummary.collected,
+    monthlyIncome: currentSummary.expected,
     properties: totals.properties,
     units: totals.units,
     occupancy: Math.round(totals.occupancy),
     vacant: totals.vacant,
   };
+
   const tenants = [...allTenants].sort((a, b) => stateOrder[a.state] - stateOrder[b.state]);
   const activity = allActivity.slice(0, 5);
   const { greeting, monthYear } = useLocalTime();
-  const collectedPct = portfolioStats.monthlyIncome && portfolioStats.monthlyIncome > 0
-    ? Math.round((portfolioStats.collected / portfolioStats.monthlyIncome) * 100)
-    : 0;
+  const collectedPct = currentSummary.collectionRate;
 
   const portfolioCards: CarouselCard[] = [
     {
@@ -81,7 +68,7 @@ export default function Dashboard() {
       color: "bg-[#2b3428]", // Deep Forest Pine (Image 2 - Primary anchor)
       textColor: "light",
       icon: Wallet,
-      badge: "On track",
+      badge: collectedPct >= 100 ? "Completed" : collectedPct > 0 ? "On track" : "Pending",
       actionLabel: "View Payments",
       actionHref: "#/payments",
     },

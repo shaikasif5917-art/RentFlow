@@ -17,6 +17,7 @@ import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { getPropertyImage, getPropertyImages } from "../utils/propertyImages";
 import {
+  getCurrentBillingMonth,
   getActiveCollectionMonth,
   isPaymentOverdue,
   calculatePaymentState,
@@ -240,66 +241,70 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
 
       const today = new Date();
       const method = (profile?.rent_collection_method as RentCollectionMethod) || "prepaid";
-      const currentBillingMonth = getActiveCollectionMonth(method, today);
+      const calendarMonth = getCurrentBillingMonth(today);
+      const activeCollectionMonth = getActiveCollectionMonth(method, today);
       const dueDay = profile?.default_due_day || 1;
       const grace = profile?.grace_period_days || 0;
 
-      // Ensure every active liable tenant has a monthly billing obligation for the current cycle
-      const activeLiableTenants = activeTenants.filter((t: any) =>
-        isTenantLiableForBillingMonth(
-          {
-            leaseStart: t.lease_start,
-            since: t.since,
-            status: t.status,
-            vacatedOn: t.vacated_on,
-          },
-          currentBillingMonth,
-        ),
-      );
-
-      const missingPayments = activeLiableTenants.filter(
-        (t: any) => !paymentsRes.data.some((p: any) => p.tenant_id === t.id && p.billing_month === currentBillingMonth),
-      );
-
+      // Ensure every active liable tenant has a monthly billing obligation for both activeCollectionMonth and calendarMonth
+      const billingMonthsToCheck = Array.from(new Set([activeCollectionMonth, calendarMonth]));
       let allPaymentsRaw = [...paymentsRes.data];
 
-      if (missingPayments.length > 0 && user) {
-        const isOverdue = isPaymentOverdue(currentBillingMonth, method, dueDay, grace, today);
-        const inserts = missingPayments.map((t: any) => ({
-          owner_id: user.id,
-          property_id: t.property_id,
-          unit_id: t.unit_id,
-          tenant_id: t.id,
-          amount: t.monthly_rent,
-          billing_month: currentBillingMonth,
-          payment_date: null,
-          method: null,
-          state: isOverdue ? "overdue" : "due",
-        }));
+      for (const targetMonth of billingMonthsToCheck) {
+        const activeLiableTenants = activeTenants.filter((t: any) =>
+          isTenantLiableForBillingMonth(
+            {
+              leaseStart: t.lease_start,
+              since: t.since,
+              status: t.status,
+              vacatedOn: t.vacated_on,
+            },
+            targetMonth,
+          ),
+        );
 
-        try {
-          const { data: insertedData, error: insertError } = await supabase
-            .from("payments")
-            .insert(inserts)
-            .select("*, tenants(name, units(number, properties(name)))");
+        const missingPayments = activeLiableTenants.filter(
+          (t: any) => !allPaymentsRaw.some((p: any) => p.tenant_id === t.id && p.billing_month === targetMonth),
+        );
 
-          if (!insertError && insertedData) {
-            allPaymentsRaw = [...insertedData, ...allPaymentsRaw];
-          } else {
+        if (missingPayments.length > 0 && user) {
+          const isOverdue = isPaymentOverdue(targetMonth, method, dueDay, grace, today);
+          const inserts = missingPayments.map((t: any) => ({
+            owner_id: user.id,
+            property_id: t.property_id,
+            unit_id: t.unit_id,
+            tenant_id: t.id,
+            amount: t.monthly_rent,
+            billing_month: targetMonth,
+            payment_date: null,
+            method: null,
+            state: isOverdue ? "overdue" : "due",
+          }));
+
+          try {
+            const { data: insertedData, error: insertError } = await supabase
+              .from("payments")
+              .insert(inserts)
+              .select("*, tenants(name, units(number, properties(name)))");
+
+            if (!insertError && insertedData) {
+              allPaymentsRaw = [...insertedData, ...allPaymentsRaw];
+            } else {
+              const synthesized = inserts.map((ins) => ({
+                ...ins,
+                id: `gen-${ins.tenant_id}-${targetMonth}`,
+                created_at: today.toISOString(),
+              }));
+              allPaymentsRaw = [...synthesized, ...allPaymentsRaw];
+            }
+          } catch {
             const synthesized = inserts.map((ins) => ({
               ...ins,
-              id: `gen-${ins.tenant_id}-${currentBillingMonth}`,
+              id: `gen-${ins.tenant_id}-${targetMonth}`,
               created_at: today.toISOString(),
             }));
             allPaymentsRaw = [...synthesized, ...allPaymentsRaw];
           }
-        } catch {
-          const synthesized = inserts.map((ins) => ({
-            ...ins,
-            id: `gen-${ins.tenant_id}-${currentBillingMonth}`,
-            created_at: today.toISOString(),
-          }));
-          allPaymentsRaw = [...synthesized, ...allPaymentsRaw];
         }
       }
 
@@ -313,10 +318,11 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
         return mapped;
       });
 
+      // Map tenants with respect to the CURRENT CALENDAR MONTH
       const mappedTenants = tenantsRes.data.map((t: any) => {
         const tenant = mapTenant(t);
         const currentPayment = mappedPayments.find(
-          (p: Payment) => p.tenantId === tenant.id && p.billingMonth === currentBillingMonth,
+          (p: Payment) => p.tenantId === tenant.id && p.billingMonth === calendarMonth,
         );
 
         const isLiable = isTenantLiableForBillingMonth(
@@ -326,15 +332,15 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
             status: tenant.status,
             vacatedOn: tenant.vacatedOn,
           },
-          currentBillingMonth,
+          calendarMonth,
         );
 
         if (!isLiable) {
-          tenant.state = "paid"; // Not liable for current cycle; ignored by propertyMetrics for vacated
+          tenant.state = "paid"; // Not liable for current calendar month
         } else {
           tenant.state = calculatePaymentState(
             currentPayment?.state,
-            currentBillingMonth,
+            calendarMonth,
             method,
             dueDay,
             grace,

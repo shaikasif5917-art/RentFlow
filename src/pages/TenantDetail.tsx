@@ -2,12 +2,11 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ChevronLeft, Mail, Phone, Users, Pencil } from "lucide-react";
 import { usePortfolio } from "../data/PortfolioContext";
-import { unitLabel } from "../data/selectors";
+import { unitLabel, getTenantMonthStatus } from "../data/selectors";
 import { currency, paymentLabel, paymentTone } from "../utils/format";
 import {
-  getActiveCollectionMonth,
+  getCurrentBillingMonth,
   parseBillingMonth,
-  isPaymentOverdue,
   type RentCollectionMethod,
 } from "../utils/billing";
 import { TenantNotes } from "../components/property/TenantNotes";
@@ -60,7 +59,7 @@ export default function TenantDetail() {
   const dueDay = profile?.default_due_day || 1;
   const gracePeriod = profile?.grace_period_days || 0;
   const today = new Date();
-  const currentBillingMonth = getActiveCollectionMonth(collectionMethod, today);
+  const currentBillingMonth = getCurrentBillingMonth(today);
   const { year, monthIndex } = parseBillingMonth(currentBillingMonth);
   const monthName = new Date(year, monthIndex, 1).toLocaleDateString("en-US", {
     month: "long",
@@ -69,11 +68,16 @@ export default function TenantDetail() {
 
   const history = payments.filter((p) => p.tenantId === tenant.id);
   const currentPayment = history.find((p) => p.billingMonth === currentBillingMonth);
-  const currentStatus =
-    currentPayment?.state ||
-    (isPaymentOverdue(currentBillingMonth, collectionMethod, dueDay, gracePeriod, today)
-      ? "overdue"
-      : "due");
+  const monthStatus = getTenantMonthStatus(
+    tenant,
+    currentBillingMonth,
+    payments,
+    collectionMethod,
+    dueDay,
+    gracePeriod,
+    today,
+  );
+  const currentStatus = monthStatus.status === "paid" ? "paid" : monthStatus.status === "overdue" ? "overdue" : "due";
 
   return (
     <div className="space-y-5 sm:space-y-8 pb-24 sm:pb-0">
