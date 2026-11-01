@@ -4,6 +4,7 @@ import { ChevronLeft, Mail, Phone, Users, Pencil } from "lucide-react";
 import { usePortfolio } from "../data/PortfolioContext";
 import { unitLabel } from "../data/selectors";
 import { currency, paymentLabel, paymentTone } from "../utils/format";
+import { getCurrentBillingMonth } from "../utils/billing";
 import { TenantNotes } from "../components/property/TenantNotes";
 import { UpdateRentModal, VacateTenantModal, EditTenantRentModal, EditTenantNameModal } from "../components/property/UnitModals";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -53,9 +54,9 @@ export default function TenantDetail() {
   const history = payments.filter((p) => p.tenantId === tenant.id);
   const today = new Date();
   const monthName = today.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const currentBillingMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`;
+  const currentBillingMonth = getCurrentBillingMonth(today);
   const currentPayment = history.find((p) => p.billingMonth === currentBillingMonth);
-  const currentStatus = currentPayment?.state === "paid" ? "paid" : "due";
+  const currentStatus = currentPayment?.state || tenant.state;
 
   return (
     <div className="space-y-5 sm:space-y-8 pb-24 sm:pb-0">
@@ -199,7 +200,9 @@ export default function TenantDetail() {
                 <div>
                   <div className="tabular text-[14px] font-semibold text-[var(--color-ink)]">{currency(p.amount)}</div>
                   <div className="text-[12.5px] text-[var(--color-ink-soft)]">
-                    {p.date} · {p.method}
+                    {p.state === "paid"
+                      ? `${p.date ? new Date(p.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "Paid"} · ${p.method || "Payment"}`
+                      : `Billed for ${new Date(p.billingMonth).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}`}
                   </div>
                 </div>
                 <StatusBadge tone={paymentTone(p.state)} dot>

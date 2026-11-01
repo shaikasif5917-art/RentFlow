@@ -31,12 +31,22 @@ export function propertyMetrics(units: Unit[], tenants: Tenant[]): PropertyMetri
     if (u.status === "occupied") {
       occupied++;
       const t = u.tenantId ? byId.get(u.tenantId) : undefined;
-      const actualRent = t ? t.rent : u.rent;
-      expected += actualRent;
-      if (t?.state === "paid") collected += actualRent;
-      else {
-        outstanding += actualRent;
-        if (t?.state === "overdue") overdueCount++;
+      // Active contracted tenant takes absolute precedence for rent accounting
+      if (t && t.status === "active") {
+        const actualRent = t.rent;
+        expected += actualRent;
+        if (t.state === "paid") {
+          collected += actualRent;
+        } else {
+          outstanding += actualRent;
+          if (t.state === "overdue") {
+            overdueCount++;
+          }
+        }
+      } else {
+        // Fallback to unit default rent if occupied without an active tenant profile
+        expected += u.rent;
+        outstanding += u.rent;
       }
     } else if (u.status === "vacant") {
       vacant++;

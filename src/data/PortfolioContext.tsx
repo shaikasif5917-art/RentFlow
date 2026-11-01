@@ -16,6 +16,13 @@ import { currency } from "../utils/format";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { getPropertyImage, getPropertyImages } from "../utils/propertyImages";
+import {
+  getCurrentBillingMonth,
+  isPaymentOverdue,
+  calculatePaymentState,
+  isTenantLiableForBillingMonth,
+  type RentCollectionMethod,
+} from "../utils/billing";
 
 export interface NewPropertyInput {
   name: string;
@@ -123,23 +130,34 @@ const mapTenant = (row: any): Tenant => ({
   vacatedOn: row.vacated_on,
 });
 
-const mapPayment = (row: any): Payment => ({
-  id: row.id,
-  tenantId: row.tenant_id,
-  tenant: row.tenants?.name || "",
-  propertyId: row.property_id,
-  property: row.tenants?.units?.properties?.name || "",
-  unitId: row.unit_id,
-  unit: row.tenants?.units?.number || "",
-  amount: row.amount,
-  date: row.payment_date,
-  billingMonth: row.billing_month,
-  method: row.method as PaymentMethod,
-  state: row.state as PaymentState,
-  reference: row.reference,
-  notes: row.notes,
-  recordedAt: row.recorded_at,
-});
+const mapPayment = (
+  row: any,
+  allTenants: any[] = [],
+  allUnits: any[] = [],
+  allProps: any[] = [],
+): Payment => {
+  const tenantObj = allTenants.find((t) => t.id === row.tenant_id);
+  const unitObj = allUnits.find((u) => u.id === (row.unit_id || tenantObj?.unit_id));
+  const propObj = allProps.find((p) => p.id === (row.property_id || unitObj?.property_id || tenantObj?.property_id));
+
+  return {
+    id: row.id,
+    tenantId: row.tenant_id,
+    tenant: row.tenants?.name || tenantObj?.name || "Tenant",
+    propertyId: row.property_id || propObj?.id || "",
+    property: row.tenants?.units?.properties?.name || propObj?.name || "Property",
+    unitId: row.unit_id || unitObj?.id || "",
+    unit: row.tenants?.units?.number || (unitObj ? unitObj.number : ""),
+    amount: row.amount,
+    date: row.payment_date,
+    billingMonth: row.billing_month,
+    method: row.method as PaymentMethod,
+    state: row.state as PaymentState,
+    reference: row.reference,
+    notes: row.notes,
+    recordedAt: row.recorded_at,
+  };
+};
 
 const mapActivity = (row: any): ActivityItem => {
   const d = new Date(row.created_at);
@@ -219,44 +237,107 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       });
 
       const today = new Date();
-      const currentBillingMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+      const currentBillingMonth = getCurrentBillingMonth(today);
+      const method = (profile?.rent_collection_method as RentCollectionMethod) || "prepaid";
+      const dueDay = profile?.default_due_day || 1;
+      const grace = profile?.grace_period_days || 0;
+
+      // Ensure every active liable tenant has a monthly billing obligation for the current cycle
+      const activeLiableTenants = activeTenants.filter((t: any) =>
+        isTenantLiableForBillingMonth(
+          {
+            leaseStart: t.lease_start,
+            since: t.since,
+            status: t.status,
+            vacatedOn: t.vacated_on,
+          },
+          currentBillingMonth,
+        ),
+      );
+
+      const missingPayments = activeLiableTenants.filter(
+        (t: any) => !paymentsRes.data.some((p: any) => p.tenant_id === t.id && p.billing_month === currentBillingMonth),
+      );
+
+      let allPaymentsRaw = [...paymentsRes.data];
+
+      if (missingPayments.length > 0 && user) {
+        const isOverdue = isPaymentOverdue(currentBillingMonth, method, dueDay, grace, today);
+        const inserts = missingPayments.map((t: any) => ({
+          owner_id: user.id,
+          property_id: t.property_id,
+          unit_id: t.unit_id,
+          tenant_id: t.id,
+          amount: t.monthly_rent,
+          billing_month: currentBillingMonth,
+          payment_date: null,
+          method: null,
+          state: isOverdue ? "overdue" : "due",
+        }));
+
+        try {
+          const { data: insertedData, error: insertError } = await supabase
+            .from("payments")
+            .insert(inserts)
+            .select("*, tenants(name, units(number, properties(name)))");
+
+          if (!insertError && insertedData) {
+            allPaymentsRaw = [...insertedData, ...allPaymentsRaw];
+          } else {
+            const synthesized = inserts.map((ins) => ({
+              ...ins,
+              id: `gen-${ins.tenant_id}-${currentBillingMonth}`,
+              created_at: today.toISOString(),
+            }));
+            allPaymentsRaw = [...synthesized, ...allPaymentsRaw];
+          }
+        } catch {
+          const synthesized = inserts.map((ins) => ({
+            ...ins,
+            id: `gen-${ins.tenant_id}-${currentBillingMonth}`,
+            created_at: today.toISOString(),
+          }));
+          allPaymentsRaw = [...synthesized, ...allPaymentsRaw];
+        }
+      }
+
+      // Map payments with complete context and dynamic overdue state verification
+      const mappedPayments = allPaymentsRaw.map((p: any) => {
+        const mapped = mapPayment(p, tenantsRes.data, unitsRes.data, propsRes.data);
+        if (mapped.state !== "paid") {
+          const overdue = isPaymentOverdue(mapped.billingMonth, method, dueDay, grace, today);
+          mapped.state = overdue ? "overdue" : "due";
+        }
+        return mapped;
+      });
 
       const mappedTenants = tenantsRes.data.map((t: any) => {
         const tenant = mapTenant(t);
-        const currentPayment = paymentsRes.data.find(
-          (p: any) => p.tenant_id === tenant.id && p.billing_month === currentBillingMonth
+        const currentPayment = mappedPayments.find(
+          (p: Payment) => p.tenantId === tenant.id && p.billingMonth === currentBillingMonth,
         );
-        
-        const method = profile?.rent_collection_method || "prepaid";
-        const dueDay = profile?.default_due_day || 1;
-        const grace = profile?.grace_period_days || 0;
-        
-        let deadlineDate = new Date(currentBillingMonth);
-        if (method === "postpaid") {
-          deadlineDate.setMonth(deadlineDate.getMonth() + 1);
-        }
-        deadlineDate.setDate(dueDay);
-        deadlineDate.setDate(deadlineDate.getDate() + grace);
-        
-        // Ensure midnight for comparison
-        deadlineDate.setHours(23, 59, 59, 999);
-        const isOverdue = today > deadlineDate;
 
-        const tenantStartMonth = new Date(tenant.since).toISOString().substring(0, 7) + "-01";
+        const isLiable = isTenantLiableForBillingMonth(
+          {
+            leaseStart: tenant.since,
+            since: tenant.since,
+            status: tenant.status,
+            vacatedOn: tenant.vacatedOn,
+          },
+          currentBillingMonth,
+        );
 
-        if (tenant.status === "vacated" && tenant.vacatedOn) {
-          const vacatedMonth = tenant.vacatedOn.substring(0, 7) + "-01";
-          if (currentBillingMonth > vacatedMonth) {
-            // After they vacate, they do not owe rent for future months
-            tenant.state = "paid"; // Or we could use a different state, but 'paid' prevents it from showing as 'due'
-          } else {
-            tenant.state = currentPayment?.state === "paid" ? "paid" : isOverdue ? "overdue" : "due";
-          }
-        } else if (currentBillingMonth < tenantStartMonth) {
-          // Do not charge a new tenant for periods before their tenancy begins
-          tenant.state = "paid";
+        if (!isLiable) {
+          tenant.state = "paid"; // Not liable for current cycle; ignored by propertyMetrics for vacated
         } else {
-          tenant.state = currentPayment?.state === "paid" ? "paid" : isOverdue ? "overdue" : "due";
+          tenant.state = calculatePaymentState(
+            currentPayment?.state,
+            currentBillingMonth,
+            method,
+            dueDay,
+            grace,
+            today,
+          );
         }
         return tenant;
       });
@@ -265,7 +346,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       setUnits(localUnits);
       setTenants(mappedTenants);
       setTenantNotes(notesRes.data.map(mapTenantNote));
-      setPayments(paymentsRes.data.map(mapPayment));
+      setPayments(mappedPayments);
       setActivity(activitiesRes.data.map(mapActivity));
     } catch (err: any) {
       console.error("Portfolio fetch error", {
@@ -430,6 +511,15 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       const unit = units.find((u) => u.id === unitId);
       const property = unit && properties.find((p) => p.id === unit.propertyId);
       if (!unit || !property) return;
+
+      if (unit.status === "occupied") {
+        throw new Error("Unit is already occupied. Cannot assign a tenant to an occupied unit.");
+      }
+      const existingActiveTenant = tenants.find((t) => t.unitId === unitId && t.status === "active");
+      if (existingActiveTenant) {
+        throw new Error("Unit already has an active tenant.");
+      }
+
       const name = input.name.trim();
       const parts = name.toLowerCase().split(" ");
       const email = `${parts[0]}.${parts[parts.length - 1]}@gmail.com`;
@@ -476,7 +566,11 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
         }
 
         const today = new Date();
-        const billingMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+        const billingMonth = getCurrentBillingMonth(today);
+        const method = (profile?.rent_collection_method as RentCollectionMethod) || "prepaid";
+        const dueDay = profile?.default_due_day || 1;
+        const grace = profile?.grace_period_days || 0;
+        const isOverdue = isPaymentOverdue(billingMonth, method, dueDay, grace, today);
 
         const { error: paymentError } = await supabase.from("payments").insert({
           owner_id: user.id,
@@ -484,10 +578,10 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
           unit_id: unitId,
           tenant_id: tenantData.id,
           amount: input.rent,
-          payment_date: today.toISOString().split('T')[0],
+          payment_date: null,
           billing_month: billingMonth,
-          method: "UPI",
-          state: "due"
+          method: null,
+          state: isOverdue ? "overdue" : "due"
         });
         
         if (paymentError) {
@@ -508,18 +602,18 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
         throw err;
       }
     },
-    [user, units, properties, fetchPortfolio, log],
+    [user, units, properties, tenants, profile, fetchPortfolio, log],
   );
 
   const recordRent = useCallback<PortfolioContextValue["recordRent"]>(
     async (unitId, method) => {
       if (!user) return;
       const unit = units.find((u) => u.id === unitId);
-      const tenant = unit && tenants.find((t) => t.id === unit.tenantId);
+      const tenant = unit && tenants.find((t) => t.id === unit.tenantId && t.status === "active");
       if (!unit || !tenant) return;
       
       const today = new Date();
-      const billingMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+      const billingMonth = getCurrentBillingMonth(today);
 
       try {
         const { error: paymentError } = await supabase.from("payments").upsert({
@@ -537,8 +631,6 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
 
         if (paymentError) throw paymentError;
 
-
-        
         await fetchPortfolio();
         log(unit.propertyId, "payment", `${currency(tenant.rent)} rent received`, `Unit ${unit.number} · ${tenant.name}`);
       } catch (err) {
@@ -557,7 +649,10 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       if (!tenant || !unit) return;
 
       const today = new Date();
-      const billingMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+      const billingMonth = getCurrentBillingMonth(today);
+      const method = (profile?.rent_collection_method as RentCollectionMethod) || "prepaid";
+      const dueDay = profile?.default_due_day || 1;
+      const grace = profile?.grace_period_days || 0;
 
       try {
         const payload: any = {
@@ -567,21 +662,19 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
           tenant_id: tenant.id,
           amount: tenant.rent,
           billing_month: billingMonth,
-          state: isPaid ? "paid" : "due",
         };
 
         if (isPaid) {
-          payload.payment_date = today.toISOString().split("T")[0];
-          payload.method = "UPI"; // fallback/default
-          
-          // Only update recorded_at if it's currently unpaid, otherwise keep original.
-          // Wait, the upsert will overwrite. Since we do a full upsert, we need to grab the existing `recorded_at`.
-          // We can check the existing payment from the `payments` state!
           const existingPayment = payments.find(p => p.tenantId === tenant.id && p.billingMonth === billingMonth);
+          payload.state = "paid";
+          payload.payment_date = today.toISOString().split("T")[0];
+          payload.method = existingPayment?.method || "UPI";
           payload.recorded_at = (existingPayment?.state === "paid" && existingPayment.recordedAt) 
             ? existingPayment.recordedAt 
             : new Date().toISOString();
         } else {
+          const isOverdue = isPaymentOverdue(billingMonth, method, dueDay, grace, today);
+          payload.state = isOverdue ? "overdue" : "due";
           payload.payment_date = null;
           payload.method = null;
           payload.recorded_at = null;
@@ -602,7 +695,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
         throw err;
       }
     },
-    [user, tenants, units, fetchPortfolio, log],
+    [user, tenants, units, payments, profile, fetchPortfolio, log],
   );
 
   const vacateTenant = useCallback<PortfolioContextValue["vacateTenant"]>(
@@ -703,6 +796,18 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
           .eq("owner_id", user.id);
 
         if (error) throw error;
+
+        // Also update any pending (unpaid) payment record for the current billing cycle
+        // Historical and already-paid payments remain completely intact
+        const today = new Date();
+        const currentBillingMonth = getCurrentBillingMonth(today);
+        await supabase
+          .from("payments")
+          .update({ amount: newRent })
+          .eq("tenant_id", tenantId)
+          .eq("billing_month", currentBillingMonth)
+          .neq("state", "paid");
+
         await fetchPortfolio();
         log(tenant.propertyId, "lease", `Rent updated`, `${tenant.name} · ${currency(newRent)} / month`);
       } catch (err) {

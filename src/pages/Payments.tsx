@@ -178,7 +178,7 @@ export default function Payments() {
                     {p.tenant}
                   </Link>
                   <div className="truncate text-[12px] text-[var(--color-ink-faint)] md:hidden">
-                    {p.unit} · {new Date(p.date || p.billingMonth).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                    {p.unit} · {p.date ? new Date(p.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : new Date(p.billingMonth + "T00:00:00").toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
                   </div>
                 </div>
                 <span className="hidden truncate text-[13px] text-[var(--color-ink-soft)] md:block">
@@ -187,7 +187,7 @@ export default function Payments() {
                   </Link>{" "}
                   · {p.unit}
                 </span>
-                <span className="hidden text-[13px] text-[var(--color-ink-soft)] md:block">{p.method}</span>
+                <span className="hidden text-[13px] text-[var(--color-ink-soft)] md:block">{p.method || "—"}</span>
                 <div className="flex flex-col items-end gap-1 md:hidden">
                   <span className="tabular text-right text-[13.5px] font-bold text-[var(--color-ink)]">
                     {currency(p.amount, { compact: true })}
