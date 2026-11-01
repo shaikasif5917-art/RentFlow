@@ -21,16 +21,9 @@ import {
   Layers,
   KeyRound,
   Users,
-  Clock,
   Sparkles,
 } from "lucide-react";
 import { Select, TextInput } from "../components/ui/Field";
-
-function getOrdinal(n: number): string {
-  const s = ["th", "st", "nd", "rd"];
-  const v = n % 100;
-  return s[(v - 20) % 10] || s[v] || s[0];
-}
 
 function formatAccountDate(isoString?: string | null): string {
   if (!isoString) return "Active member";
@@ -274,31 +267,6 @@ export default function Settings() {
                   subvalue={totals.units > 0 ? `${Math.round(totals.occupancy)}% occupancy` : undefined}
                 />
                 <InfoRow icon={Users} label="Active tenants" value={`${tenants.length} tenants`} />
-              </div>
-            </div>
-
-            {/* 3. Account Preferences */}
-            <div className="space-y-2">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">
-                Account Preferences
-              </div>
-              <div className="rounded-xl border border-[var(--color-line)]/70 bg-white/40 divide-y divide-[var(--color-line)]/50 overflow-hidden shadow-2xs">
-                <InfoRow
-                  icon={CreditCard}
-                  label="Collection method"
-                  value={profile?.rent_collection_method ? (profile.rent_collection_method === "prepaid" ? "Prepaid" : "Postpaid") : "Prepaid (Default)"}
-                  isCapitalize
-                />
-                <InfoRow
-                  icon={CalendarDays}
-                  label="Default rent due day"
-                  value={profile?.default_due_day ? `${profile.default_due_day}${getOrdinal(profile.default_due_day)} of the month` : "1st of the month"}
-                />
-                <InfoRow
-                  icon={Clock}
-                  label="Grace period"
-                  value={profile?.grace_period_days !== null && profile?.grace_period_days !== undefined ? `${profile.grace_period_days} days` : "5 days"}
-                />
               </div>
             </div>
           </div>
